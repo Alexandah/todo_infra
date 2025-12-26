@@ -1,0 +1,6 @@
+#!/bin/bash
+categories_dir=$(dirname $(dirname $(realpath $(which $0))))
+task=$(echo "$@" | sed 's/\s\+/_/g')
+
+taskfile=$categories_dir/new/$task
+touch $taskfile

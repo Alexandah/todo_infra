@@ -1,0 +1,23 @@
+#!/bin/bash
+todo_root=$(dirname $(dirname $(realpath $(which "$0"))))
+DONE="$todo_root/done"
+
+sum_expected_minus_actual=0
+len=0
+for t in $(find "$DONE" -mindepth 1 -type d -mtime -7); do 
+	if [ ! -f $t/:time=* ]; then
+		continue
+	fi
+	time=$(echo $t/:time=* | sed 's/^.\+=//g' | tr -d 'h')
+	if [ ! -f $t/:time_worked=* ]; then
+		continue
+	fi
+	time_worked=$(echo $t/:time_worked=* | sed 's/^.\+=//g' | tr -d 'h')
+	echo "$(basename $t)"
+	echo "	expected: $time	actual: $time_worked	error: $(dc -e "$time $time_worked - p")"
+	echo
+	len=$((len + 1))
+	sum_expected_minus_actual=$(dc -e "$time $time_worked - $sum_expected_minus_actual + p" | sed 's/-/_/g')
+done
+avg_expected_minus_actual=$(dc -e "2 k $sum_expected_minus_actual $len / p")
+echo 'Average hours over(+)/under(-)estimated:	'$avg_expected_minus_actual

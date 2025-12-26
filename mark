@@ -1,0 +1,410 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+
+categories_dir=$(dirname $(dirname $(realpath $(which $0))))
+taskdir=$1
+category_to_set_non_interactively=${2:-NULL}
+
+# Check if taskdir is a directory
+if [ ! -d "$taskdir" ]; then
+	echo "Error: $taskdir is not a directory"
+	exit 1
+fi
+
+#taskdir properties: path	name	category	goal	due_by	time
+get_category_path() {
+	local taskdir_realpath=$(realpath "$1")
+	local taskdir_category=$(dirname "$taskdir_realpath")
+	echo "$taskdir_category"
+}
+
+get_name() {
+	local taskdir="$1"
+	local taskdir_name=$(basename "$taskdir")
+	echo "$taskdir_name"
+}
+
+get_goal_path() {
+	local taskdir_realpath=$(realpath "$1")
+	local taskdir_goal=$(find $taskdir_realpath -name '::*')
+	echo "$taskdir_goal"
+}
+
+get_due_by_path() {
+	local taskdir_realpath=$(realpath "$1")
+	local taskdir_due_by=$(find $taskdir_realpath -name ':by_*')
+	echo "$taskdir_due_by"
+}
+
+get_time_path() {
+	local taskdir_realpath=$(realpath "$1")
+	local taskdir_time=$(find $taskdir_realpath -name ':time=*')
+	echo "$taskdir_time"
+}
+
+# Get the real path of the task directory
+taskdir_real=$(realpath "$taskdir")
+
+# Check if taskdir is in the todo area (but not a category directory itself)
+if find $categories_dir/* -name .infra -prune -o -type d | grep -q "$taskdir_real" ; then
+	# Additional check: prevent moving category directories themselves or the todo root
+	taskdir_basename=$(basename "$taskdir_real")
+	category_parent=$(dirname "$taskdir_real")
+	
+	# Prevent moving the todo root directory itself
+	if [ "$taskdir_real" = "$categories_dir" ]; then
+		echo "Error: Cannot move the todo root directory"
+		exit 1
+	fi
+	
+	# Prevent moving immediate children of todo root (category directories)
+	if [ "$category_parent" = "$categories_dir" ] && [ "$taskdir_basename" != ".infra" ]; then
+		echo "Error: Cannot move category directory '$taskdir_basename'"
+		exit 1
+	fi
+	: #taskdir is in todo area and not a category dir, it's ok to move it
+else
+	echo "Error: taskdir path not under todo root: $categories_dir"
+	exit 1
+fi
+
+taskdir_name="$(basename "$taskdir")"
+
+update_due_by() {
+	local destination_category=$1
+
+	local current_due_by=$(basename $(find $taskdir -name ':by*') | sed 's/:by_//') 
+
+	if [ "$destination_category" = "0_now" -o "$destination_category" = "wait" ] ; then
+		due_by=$current_due_by
+	elif [ "$destination_category" = "maybe" ] ; then
+		due_by='?'
+	elif [ "$destination_category" = "1_today" ] ; then
+		local times=$(
+			for h in {0..23}; do 
+				for m in " " :30; do 
+					if [ $h -eq 0 ]; then
+						printf "12%s_am\n" $m
+					elif [ $h -lt 12 ]; then
+						printf "%01d%s_am\n" $h $m
+					elif [ $h -eq 12 ]; then
+						printf "12%s_pm\n" $m
+					else
+						printf "%01d%s_pm\n" $((h-12)) $m
+					fi
+				done
+			done 
+		)
+		#due_by=$(echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac --gap=1)
+		crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac --gap=1'
+		due_by=$STDOUT
+	elif [ "$destination_category" = "2_week" ] ; then
+		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
+		local day_of_month=$(date | awk '{print $3}')
+		local days_of_week=$(
+			cal -m | 
+			grep " $day_of_month " | 
+			awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}' 
+		)
+		crash_if_nonzero_exit 'echo "$days_of_week" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		due_by=$(echo $STDOUT | sed 's/\s\+/_/g')_$month
+	elif [ "$destination_category" = "3_month" ] ; then
+		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
+		local cal_line=$(
+			cal -m |
+			tail -n+2
+		)
+		crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
+		due_by=$(echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1 | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+		if echo "$due_by" | grep -qi "[0-9]" ; then
+			due_by=${due_by}_$month
+		fi
+	elif [ "$destination_category" = "4_year" ] ; then
+		local month=$(
+			echo -e '1 January\n2 February\n3 March\n4 April\n5 May\n6 June\n7 July\n8 August\n9 September\n10 October\n11 November\n12 December\n13 EoY'
+		)
+		crash_if_nonzero_exit 'echo "$month" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		month=$(echo "$STDOUT" | cut -d ' ' -f2)
+		if [ "$month" = "EoY" ] ; then
+			#due_by="EoY"
+			month="December"
+			local cal_line=$(
+				cal -m $month |
+				tail -n+2 |
+				fzf -f 31 |
+				head -n1 |
+				awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}'
+			)
+			due_by=$(echo "$cal_line" | fzf -f 31 | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+			if echo "$due_by" | grep -qi "[0-9]" ; then
+				due_by=${due_by}_$month
+			fi
+		else
+			local cal_line=$(
+				cal -m $month |
+				tail -n+2 
+			)
+			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
+			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			due_by=$(echo "$STDOUT" | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+			if echo "$due_by" | grep -qi "[0-9]" ; then
+				due_by=${due_by}_$month
+			fi
+		fi
+	elif [ "$destination_category" = "done" ] ; then
+		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
+		local day_of_month=$(date | awk '{print $3}')
+		due_by=$(
+			cal -m | 
+			grep " $day_of_month " | 
+			awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}' | 
+			grep " $day_of_month[^0-9]*" |
+			sed 's/\s\+/_/g'
+		)
+		due_by=${due_by}_$month
+	fi
+	
+	echo "setting due_by to: $due_by"
+	mv $(find $taskdir -name ':by*') $taskdir/:by_$due_by
+}
+
+sum_time_estimates_per_category() {
+	local category=$1
+
+	local times=$(
+		for timefile in $(find $categories_dir/$category -name ':time=*'); do
+			basename $timefile
+		done |
+		sed 's/:time=//g' |
+		grep -o '[0-9.]\+'
+	)
+	local sum=$(
+		echo "$times" |
+		paste -sd+ |
+		bc
+	)
+	echo $sum
+}
+
+if [ "$category_to_set_non_interactively" = "NULL" ] ; then #INTERACTIVE MODE
+	categories=$(
+		find $categories_dir -mindepth 1 -maxdepth 1 -name .infra -o -name new -o -path '*wait/*' -o -name '#*' -prune -o -type d -printf "%f\n"
+	)
+	taskdir_time=$(
+		find $taskdir -name ':time=*' -exec basename {} \; |
+		sed 's/:time=//g' |
+		grep -o '[0-9.]\+'
+	)
+	mark_as=$(
+		for category in $categories ; do
+			total_estimate=$(sum_time_estimates_per_category $category)
+			total_estimate=${total_estimate:-0}
+			time_allocation=$(find $categories_dir/$category -type f -name .time_allocation -exec cat {} \;)
+			time_allocation=${time_allocation:-"N/A"}
+			if [ "$time_allocation" = "N/A" ] ; then
+				percent_done=""
+				hours_done=""
+			else
+				percent_done="$(dc -e "2 k 1 $total_estimate $time_allocation / - 100 * p")%"
+				hours_done="$(dc -e "$time_allocation $total_estimate - p")h"
+			fi
+			echo "$category		$percent_done		$hours_done"
+		done |
+			fzf --prompt="CATEGORIZE -- $taskdir_name (${taskdir_time}h) >" --header 'CATEGORY	%_DONE		HOURS' --gap=1 |
+		awk '{print $1}'
+	)
+else
+	mark_as=$category_to_set_non_interactively
+fi
+echo "mark_as: $mark_as"
+
+# Try to get title from ::* file, fallback to directory name
+title_file=$(find "$taskdir" -maxdepth 1 -name "::*" -type f | head -n1)
+if [ -n "$title_file" ]; then
+	taskdir_title="$(basename "$title_file" | sed 's/^:://' | sed 's/\.hmm$//')"
+else
+	taskdir_title="$taskdir_name"
+fi
+
+default_taskdir_rename_options=$(
+	echo -e "$taskdir_title\n$taskdir_name" |
+	sort |
+	uniq
+)
+if [ "$mark_as" = "done" ] ; then
+	prompt="FINALIZE_AS -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+	time_suggestions=$(
+		echo "0.03       2m"
+		echo "0.08       5m"
+		echo "0.11       7m"
+		echo "0.17       10m"
+		echo "0.25       15m"
+		echo "0.33       20m"
+		echo "0.41       25m"
+		echo "0.50       30m"
+		echo "0.75       45m"
+		echo "1          1h"
+		echo "1.50       1h 30m"
+		echo "2          2h"
+		echo "3          3h"
+		echo "4          4h"
+		echo "5          5h"
+		echo "6          6h"
+		echo "7          7h"
+		echo "8          8h"
+		echo "9          9h"
+		echo "10         10h"
+		echo "11         11h"
+		echo "12         12h"
+		echo "13         13h"
+		echo "14         14h"
+		echo "15         15h"
+		echo "16         16h"
+		echo "17         17h"
+		echo "18         18h"
+		echo "19         19h"
+		echo "20         20h"
+		#echo "24         1d"
+		#echo "36         1d 12h"
+		#echo "48         2d"
+		#echo "72         3d"
+		#echo "96         4d"
+		#echo "120        5d"
+		#echo "144        6d"
+		#echo "168        1w"
+		#echo "264        1w 4d"
+		#echo "336        2w"
+		#echo "504        3w"
+		#echo "672        1mo"
+		#echo "1008       1mo 2w"
+		#echo "1344       2mo"
+		#echo "2016       3mo"
+		#echo "2688       4mo"
+		#echo "3360       5mo"
+		#echo "4032       6mo"
+		#echo "4704       7mo"
+		#echo "5376       8mo"
+		#echo "6048       9mo"
+		#echo "6720       10mo"
+		#echo "7392       11mo"
+		#echo "8064       1y"
+	)
+	recorded_time=$(
+		echo "$time_suggestions" |
+		fzf --prompt="HOURS_WORKED -- $new_name >" --header="HOURS	   AKA" --gap=1 |
+		awk '{print $1}'
+	)
+	touch "$taskdir/:time_worked=${recorded_time}h"
+
+elif [ "$mark_as" = "0_now" ] ; then
+	prompt="NEXT_ACTION -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "1_today" ] ; then
+	prompt="NEXT_ACTION -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "2_week" ] ; then
+	prompt="NEXT_ACTION -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "3_month" ] ; then
+	prompt="REMEMBER_AS -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "4_year" ] ; then
+	prompt="REMEMBER_AS -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "maybe" ] ; then
+	prompt="REMEMBER_AS -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+
+elif [ "$mark_as" = "wait" ] ; then
+	prompt="BLOCKED_ACTION -- >"
+	new_name=$(
+		echo "$default_taskdir_rename_options" | 
+		fzf --prompt="$prompt" --print-query --gap=1 |
+		tac |
+		head -n+1
+	)
+	wait_reason=$(
+		cd $categories_dir/wait; 
+		ls -1 | 
+		fzf --prompt="WAITING_FOR -- $taskdir_name >" --print-query --gap=1 | 
+		tac |
+		head -n+1 |
+		sed 's/\s\+/_/g' 
+	)
+	new_name=$wait_reason/$new_name
+	mkdir -p $categories_dir/wait/$wait_reason
+
+else
+	echo "Error: Unrecognized category"
+	exit 1
+
+fi
+new_name=$(echo "$new_name" | sed 's/\s\+/_/g')
+echo "new_name: $new_name"
+echo "moving to: $categories_dir/$mark_as/$new_name"
+
+# Update due date
+update_due_by $mark_as
+
+# Check if we're moving from a wait subdirectory
+old_wait_reason=""
+if [[ "$taskdir_real" == "$categories_dir/wait/"*"/"* ]]; then
+	# Extract the wait_reason from the path using dirname and basename
+	wait_parent=$(dirname "$taskdir_real")
+	old_wait_reason=$(basename "$wait_parent")
+fi
+
+mv --no-clobber "$taskdir" "$categories_dir/$mark_as/$new_name"
+
+# If we moved from a wait subdirectory, check if it's now empty and remove if so
+if [ -n "$old_wait_reason" ]; then
+	old_wait_dir="$categories_dir/wait/$old_wait_reason"
+	if [ -d "$old_wait_dir" ] && [ -z "$(ls -A "$old_wait_dir")" ]; then
+		echo "Removing empty wait directory: $old_wait_reason"
+		rmdir "$old_wait_dir"
+	fi
+fi

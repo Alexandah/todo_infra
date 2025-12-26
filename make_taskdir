@@ -1,0 +1,88 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+
+TODOROOT=$(dirname $(dirname $(realpath $(which "$0"))))
+context_header=${1:-''}
+
+#For consistent UX experience thru-out task-sys, even tho bash read would be equivalent here
+run 'echo "" | fzf --prompt="WRITE_GOAL -- 1-3 concrete sentences >" --header="$context_header" --print-query --gap=1'
+exit_code=$?
+if [ "$exit_code" -gt "1" ] ; then
+	exit "$exit_code"
+fi
+goal=$(
+	echo "$STDOUT" | 
+	xargs | #trim leading/trailing whitespace
+	sed 's/\s\+/_/g' #replace delimiting whitespace with _
+)
+if [ -z "$goal" ] ; then #no empty goals allowed
+	echo 'ERROR: Goal cannot be empty string.' >&2
+	exit 1
+fi
+
+estimated_time_suggestions=$(
+	echo "0.03       2m"
+	echo "0.08       5m"
+	echo "0.11       7m"
+	echo "0.17       10m"
+	echo "0.25       15m"
+	echo "0.33       20m"
+	echo "0.41       25m"
+	echo "0.50       30m"
+	echo "0.75       45m"
+	echo "1          1h"
+	echo "1.50       1h 30m"
+	echo "2          2h"
+	echo "3          3h"
+	echo "4          4h"
+	echo "5          5h"
+	echo "6          6h"
+	echo "7          7h"
+	echo "8          8h"
+	echo "9          9h"
+	echo "10         10h"
+	#these have never been used, and having goals this large is probably pathological, as they should be broken up into a series of smaller goals instead
+	#echo "24         1d"
+	#echo "36         1d 12h"
+	#echo "48         2d"
+	#echo "72         3d"
+	#echo "96         4d"
+	#echo "120        5d"
+	#echo "144        6d"
+	#echo "168        1w"
+	#echo "264        1w 4d"
+	#echo "336        2w"
+	#echo "504        3w"
+	#echo "672        1mo"
+	#echo "1008       1mo 2w"
+	#echo "1344       2mo"
+	#echo "2016       3mo"
+	#echo "2688       4mo"
+	#echo "3360       5mo"
+	#echo "4032       6mo"
+	#echo "4704       7mo"
+	#echo "5376       8mo"
+	#echo "6048       9mo"
+	#echo "6720       10mo"
+	#echo "7392       11mo"
+	#echo "8064       1y"
+)
+crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" --gap=1'
+planning_fallacy_penalty=1.75
+estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $planning_fallacy_penalty * p") #planning fallacy penalty: assume things will take x2 longer than you think
+
+taskdir=$TODOROOT/new/$goal
+mkdir $taskdir
+touch $taskdir/::$goal.hmm
+touch $taskdir/:by_?
+touch $taskdir/:time=${estimated_time}h
+cp $TODOROOT/.infra/log.do $taskdir/log.do
+
+do_it_now_cutoff=0.25	#15 minutes
+if (( $(echo "$estimated_time <= $do_it_now_cutoff" | bc -l) )); then #if the goal can be done quickly, do it now
+	mark $taskdir 0_now
+	taskdir=$(find "$TODOROOT/0_now" -type f -name "$goal.hmm" -exec dirname {} \; | head -n 1)
+fi
+
+echo $taskdir

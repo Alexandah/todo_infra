@@ -1,0 +1,34 @@
+#!/bin/bash
+pscriptdir() {
+	echo "$(dirname $(realpath $(which "$0")))"
+}
+
+pathtothisfile() {
+	echo "$(realpath $(which "$0"))"
+}
+
+run() {
+	local uuid=$(uuidgen)
+	local stdout_file=/tmp/stdout_$uuid	
+	local stderr_file=/tmp/stderr_$uuid	
+	eval "$@" 1> $stdout_file 2> $stderr_file 
+	local exit_code=$?
+	STDOUT=$(cat $stdout_file)
+	STDERR=$(cat $stderr_file)
+	rm $stdout_file
+	rm $stderr_file
+	return $exit_code
+}
+
+crash_if_nonzero_exit() {
+	run "$@"
+	exit_code=$?
+	if [ "0" -ne "$exit_code" ] ; then
+		echo -e "ERROR: Crashed due to non-zero exit code of command:	$@" >&2
+		echo -e "STDOUT:\n$STDOUT" >&2
+		echo -e "STDERR:\n$STDERR" >&2
+		echo "EXIT_CODE: $exit_code" >&2
+		exit $exit_code
+	fi
+	return 0
+}
