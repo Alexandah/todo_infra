@@ -12,6 +12,13 @@ if [ ! -d "$taskdir" ]; then
 	exit 1
 fi
 
+#Accounts for argument --gap=1 not supported by fzf version 0.54.2 used on AMD machine
+if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then #AMD machine
+    fzf_gap_arg=''
+else #personal machine
+    fzf_gap_arg='--gap=1'
+fi
+
 #taskdir properties: path	name	category	goal	due_by	time
 get_category_path() {
 	local taskdir_realpath=$(realpath "$1")
@@ -97,7 +104,7 @@ update_due_by() {
 			done 
 		)
 		#due_by=$(echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac --gap=1)
-		crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac --gap=1'
+		crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac $fzf_gap_arg'
 		due_by=$STDOUT
 	elif [ "$destination_category" = "2_week" ] ; then
 		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
@@ -107,7 +114,7 @@ update_due_by() {
 			grep " $day_of_month " | 
 			awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}' 
 		)
-		crash_if_nonzero_exit 'echo "$days_of_week" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		crash_if_nonzero_exit 'echo "$days_of_week" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 		due_by=$(echo $STDOUT | sed 's/\s\+/_/g')_$month
 	elif [ "$destination_category" = "3_month" ] ; then
 		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
@@ -115,9 +122,9 @@ update_due_by() {
 			cal -m |
 			tail -n+2
 		)
-		crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 		cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
-		due_by=$(echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1 | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+		due_by=$(echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
 		if echo "$due_by" | grep -qi "[0-9]" ; then
 			due_by=${due_by}_$month
 		fi
@@ -125,7 +132,7 @@ update_due_by() {
 		local month=$(
 			echo -e '1 January\n2 February\n3 March\n4 April\n5 May\n6 June\n7 July\n8 August\n9 September\n10 October\n11 November\n12 December\n13 EoY'
 		)
-		crash_if_nonzero_exit 'echo "$month" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		crash_if_nonzero_exit 'echo "$month" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 		month=$(echo "$STDOUT" | cut -d ' ' -f2)
 		if [ "$month" = "EoY" ] ; then
 			#due_by="EoY"
@@ -146,9 +153,9 @@ update_due_by() {
 				cal -m $month |
 				tail -n+2 
 			)
-			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 			cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
-			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 			due_by=$(echo "$STDOUT" | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
 			if echo "$due_by" | grep -qi "[0-9]" ; then
 				due_by=${due_by}_$month
@@ -213,7 +220,7 @@ if [ "$category_to_set_non_interactively" = "NULL" ] ; then #INTERACTIVE MODE
 			fi
 			echo "$category		$percent_done		$hours_done"
 		done |
-			fzf --prompt="CATEGORIZE -- $taskdir_name (${taskdir_time}h) >" --header 'CATEGORY	%_DONE		HOURS' --gap=1 |
+			fzf --prompt="CATEGORIZE -- $taskdir_name (${taskdir_time}h) >" --header 'CATEGORY	%_DONE		HOURS' $fzf_gap_arg |
 		awk '{print $1}'
 	)
 else
@@ -238,7 +245,7 @@ if [ "$mark_as" = "done" ] ; then
 	prompt="FINALIZE_AS -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -300,7 +307,7 @@ if [ "$mark_as" = "done" ] ; then
 	)
 	recorded_time=$(
 		echo "$time_suggestions" |
-		fzf --prompt="HOURS_WORKED -- $new_name >" --header="HOURS	   AKA" --gap=1 |
+		fzf --prompt="HOURS_WORKED -- $new_name >" --header="HOURS	   AKA" $fzf_gap_arg |
 		awk '{print $1}'
 	)
 	touch "$taskdir/:time_worked=${recorded_time}h"
@@ -309,7 +316,7 @@ elif [ "$mark_as" = "0_now" ] ; then
 	prompt="NEXT_ACTION -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -318,7 +325,7 @@ elif [ "$mark_as" = "1_today" ] ; then
 	prompt="NEXT_ACTION -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -327,7 +334,7 @@ elif [ "$mark_as" = "2_week" ] ; then
 	prompt="NEXT_ACTION -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -336,7 +343,7 @@ elif [ "$mark_as" = "3_month" ] ; then
 	prompt="REMEMBER_AS -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -345,7 +352,7 @@ elif [ "$mark_as" = "4_year" ] ; then
 	prompt="REMEMBER_AS -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -354,7 +361,7 @@ elif [ "$mark_as" = "maybe" ] ; then
 	prompt="REMEMBER_AS -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
@@ -363,14 +370,14 @@ elif [ "$mark_as" = "wait" ] ; then
 	prompt="BLOCKED_ACTION -- >"
 	new_name=$(
 		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query --gap=1 |
+		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
 		tac |
 		head -n+1
 	)
 	wait_reason=$(
 		cd $categories_dir/wait; 
 		ls -1 | 
-		fzf --prompt="WAITING_FOR -- $taskdir_name >" --print-query --gap=1 | 
+		fzf --prompt="WAITING_FOR -- $taskdir_name >" --print-query $fzf_gap_arg | 
 		tac |
 		head -n+1 |
 		sed 's/\s\+/_/g' 
