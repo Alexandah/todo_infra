@@ -1,7 +1,0 @@
-#!/bin/bash
-set -e
-HERE=$(dirname $(realpath $(which "$0")))
-source "$HERE"/bash_utils
-timestamp=$(date '+%D %T' | tr '/' '-')
-read -e -i "$timestamp	" logentry
-echo "# $logentry" >> "$(pathtothisfile)"
