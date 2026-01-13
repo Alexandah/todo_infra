@@ -111,13 +111,22 @@ update_due_by() {
 		due_by=$(echo $STDOUT | sed 's/\s\+/_/g')_$month
 	elif [ "$destination_category" = "3_month" ] ; then
 		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
-		local cal_line=$(
-			cal -m |
-			tail -n+2
+		#local cal_line=$(
+		#	cal -m |
+		#	tail -n+2
+		#)
+		due_by=$(
+			cal | 
+			tail -n+3 | 
+			xargs |
+			tr ' ' '\n' |
+			fzf --prompt="DUE_BY -- $taskdir_name >" | 
+			sed 's/\s\+/_/g' | 
+			sed 's/_[a-zA-Z]\+$//g'
 		)
-		crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
-		cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
-		due_by=$(echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1 | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+		#crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+		#cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
+		#due_by=$(echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1 | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
 		if echo "$due_by" | grep -qi "[0-9]" ; then
 			due_by=${due_by}_$month
 		fi
@@ -142,14 +151,23 @@ update_due_by() {
 				due_by=${due_by}_$month
 			fi
 		else
-			local cal_line=$(
-				cal -m $month |
-				tail -n+2 
+			#local cal_line=$(
+			#	cal -m $month |
+			#	tail -n+2 
+			#)
+			#crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			#cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
+			#crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
+			#due_by=$(echo "$STDOUT" | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
+			due_by=$(
+				cal | 
+				tail -n+3 | 
+				xargs |
+				tr ' ' '\n' |
+				fzf --prompt="DUE_BY -- $taskdir_name >" | 
+				sed 's/\s\+/_/g' | 
+				sed 's/_[a-zA-Z]\+$//g'
 			)
-			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
-			cal_line=$(echo "$STDOUT" | awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}')
-			crash_if_nonzero_exit 'echo "$cal_line" | fzf --prompt="DUE_BY -- $taskdir_name >" --gap=1'
-			due_by=$(echo "$STDOUT" | sed 's/\s\+/_/g' | sed 's/_[a-zA-Z]\+$//g')
 			if echo "$due_by" | grep -qi "[0-9]" ; then
 				due_by=${due_by}_$month
 			fi

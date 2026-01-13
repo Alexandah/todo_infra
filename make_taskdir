@@ -69,7 +69,7 @@ estimated_time_suggestions=$(
 	#echo "8064       1y"
 )
 crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" --gap=1'
-planning_fallacy_penalty=1.75
+planning_fallacy_penalty=1.6
 estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $planning_fallacy_penalty * p") #planning fallacy penalty: assume things will take x2 longer than you think
 
 taskdir=$TODOROOT/new/$goal
