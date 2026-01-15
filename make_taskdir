@@ -41,17 +41,19 @@ estimated_time_suggestions=$(
 	echo "0.50       30m"
 	echo "0.75       45m"
 	echo "1          1h"
+	echo "1.25       1h 15m"
 	echo "1.50       1h 30m"
+	echo "1.75       1h 45m"
 	echo "2          2h"
-	echo "3          3h"
-    #anything past 3h is sus, suggests it should prob be broken into separate tasks, but i am leaving this for now
-	echo "4          4h"
-	echo "5          5h"
-	echo "6          6h"
-	echo "7          7h"
-	echo "8          8h"
-	echo "9          9h"
-	echo "10         10h"
+    #anything larger is sus, since it is unlikely to fit within 1 ultradian-- suggests it should prob be broken into separate tasks
+	#echo "3          3h"
+	#echo "4          4h"
+	#echo "5          5h"
+	#echo "6          6h"
+	#echo "7          7h"
+	#echo "8          8h"
+	#echo "9          9h"
+	#echo "10         10h"
 )
 crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" $fzf_gap_arg'
 planning_fallacy_penalty=1.6
