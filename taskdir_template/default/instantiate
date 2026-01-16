@@ -1,0 +1,32 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+
+declare -A findnreplace=(
+	[destroyme]=""
+	[REPLACE_ME]="XXX"
+)
+
+#Find-n-Replace in regular file contents + names
+find . -type f -print0 | while IFS= read -r -d '' file; do
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		sed -i "s/$to_replace/$replacement/g" "$file"
+	done
+	revised_filename=$(basename "$file")
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		revised_filename=$(echo "$revised_filename" | sed "s/$to_replace/$replacement/g")
+	done
+	mv "$file" "$revised_filename"
+done
+
+#TODO: debug, this isnt working properly
+#Find-n-Replace in dir names
+#find . -depth -type d -print0 | while IFS= read -r -d '' dir_path; do
+#	revised_dir_name=$(basename "$dir_path")
+#	for to_replace in "${!findnreplace[@]}"; do
+#		replacement="${findnreplace[$to_replace]}"
+#		revised_dir_name=$(echo "$revised_dir_name" | sed "s/$to_replace/$replacement/g")
+#	done
+#	mv "$dir_path" "$revised_dirname"
+#done
