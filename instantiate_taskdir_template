@@ -8,5 +8,5 @@ template_name=$(basename "$taskdir_template")
 instantiated_template="$TODO_ROOT/new/$template_name"
 
 cp -r "$taskdir_template" "$instantiated_template"
-instantiated_template/instantiate
-rm instantiated_template/instantiate
+"$instantiated_template"/instantiate
+rm "$instantiated_template"/instantiate
