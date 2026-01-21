@@ -17,18 +17,18 @@ find . -type f -print0 | while IFS= read -r -d '' file; do
 		replacement="${findnreplace[$to_replace]}"
 		revised_filename=$(echo "$revised_filename" | sed "s/$to_replace/$replacement/g")
 	done
-	mv "$file" "$revised_filename"
+	mv "$file" "$(dirname "$file")/$revised_filename"
 done
 
 #TODO: debug, this isnt working properly for some special cases
 #Find-n-Replace in dir names
-#find . -depth -type d -print0 | while IFS= read -r -d '' dir_path; do
-#	revised_dir_name=$(basename "$dir_path")
-#	for to_replace in "${!findnreplace[@]}"; do
-#		replacement="${findnreplace[$to_replace]}"
-#		#echo "replacing: $to_replace	replacement: $replacement"
-#		revised_dir_name=$(echo "$revised_dir_name" | sed "s/$to_replace/$replacement/g")
-#		#echo "revised dir name: $revised_dir_name"
-#	done
-#	mv "$dir_path" "$(dirname "$dir_path")/$revised_dir_name"
-#done
+find . -depth -type d -print0 | while IFS= read -r -d '' dir_path; do
+	revised_dir_name=$(basename "$dir_path")
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		#echo "replacing: $to_replace	replacement: $replacement"
+		revised_dir_name=$(echo "$revised_dir_name" | sed "s/$to_replace/$replacement/g")
+		#echo "revised dir name: $revised_dir_name"
+	done
+	mv "$dir_path" "$(dirname "$dir_path")/$revised_dir_name"
+done
