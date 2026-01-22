@@ -1,5 +1,5 @@
 #!/bin/bash
-HERE=$(dirname $(realpath $(which "$0")))
+THIS_FILE=$(realpath $(which "$0"))
 
 declare -A findnreplace=(
 	[destroyme]=""
@@ -7,7 +7,7 @@ declare -A findnreplace=(
 )
 
 #Find-n-Replace in regular file contents + names
-find . -type f -print0 | while IFS= read -r -d '' file; do
+find $(realpath .) -type f -not -path "$THIS_FILE" -print0 | while IFS= read -r -d '' file; do
 	for to_replace in "${!findnreplace[@]}"; do
 		replacement="${findnreplace[$to_replace]}"
 		sed -i "s/$to_replace/$replacement/g" "$file"
@@ -20,15 +20,12 @@ find . -type f -print0 | while IFS= read -r -d '' file; do
 	mv "$file" "$(dirname "$file")/$revised_filename"
 done
 
-#TODO: debug, this isnt working properly for some special cases
 #Find-n-Replace in dir names
 find . -depth -type d -print0 | while IFS= read -r -d '' dir_path; do
 	revised_dir_name=$(basename "$dir_path")
 	for to_replace in "${!findnreplace[@]}"; do
 		replacement="${findnreplace[$to_replace]}"
-		#echo "replacing: $to_replace	replacement: $replacement"
 		revised_dir_name=$(echo "$revised_dir_name" | sed "s/$to_replace/$replacement/g")
-		#echo "revised dir name: $revised_dir_name"
 	done
 	mv "$dir_path" "$(dirname "$dir_path")/$revised_dir_name"
 done
