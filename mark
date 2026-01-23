@@ -288,8 +288,10 @@ if [ "$mark_as" = "done" ] ; then
 		echo "6          6h"
 		echo "7          7h"
         #presuming you cant have taken a 2h-tops init guess and underestimated the goal this hard
-		#echo "8          8h"
-		#echo "9          9h"
+        #01-23-26   within 2 weeks of writing the above, it turns out I am empirically capable of this level of underestimation
+		echo "8          8h"
+		echo "9          9h"
+        #but for the love of god, surely please do not exceed this
 		#echo "10         10h"
 		#echo "11         11h"
 		#echo "12         12h"
