@@ -1,0 +1,12 @@
+::Weekly_Review_DATE
+	Create taskdirs or task-snippets for any recurring thoughts, TODOs written in teams messages, email follow-ups, etc.
+	Mark any tasks under todo/wait/* as no longer waiting & update their documentation, if applicable
+	Review taskdir time estimates from past week
+		Write 2 sentences answering: Any patterns in the estimation accuracy?
+		Write 1-3 sentences of follow-up insights or actions to keep in mind so as to estimate accurately next week.
+	Review current projects
+		Write 1-3 sentences describing what projects we focused on & how progress went this week.
+		Write 2 sentences describing blockers, neglecting projects needing work, pain-points, etc.
+		Write 1-3 sentences describing which projects or follow-up actions to focus on next week.
+	Translate the above written analysis into taskdirs
+
