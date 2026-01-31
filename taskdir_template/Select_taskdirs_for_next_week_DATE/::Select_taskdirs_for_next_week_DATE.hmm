@@ -1,0 +1,6 @@
+::Select_taskdirs_for_next_week_DATE
+	estimate hrs
+	regen weekly taskdirs
+	fill hrs based on priority
+	select tasks for monday
+
