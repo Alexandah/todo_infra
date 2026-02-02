@@ -2,9 +2,18 @@
 todo_root=$(dirname $(dirname $(realpath $(which "$0"))))
 DONE="$todo_root/done"
 
+days_back_options=$(
+	echo '7 days'
+	echo '14 days'
+	echo '30 days'
+	echo '90 days'
+)
+days_back=$(echo "$days_back_options" | fzf --prompt 'Days back to summarize >'| awk '{print $1}')
+
+
 sum_expected_minus_actual=0
 len=0
-for t in $(find "$DONE" -mindepth 1 -type d -mtime -7); do 
+for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do 
 	if [ ! -f $t/:time=* ]; then
 		continue
 	fi
