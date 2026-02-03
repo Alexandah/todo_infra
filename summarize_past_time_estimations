@@ -14,6 +14,7 @@ days_back=$(echo "$days_back_options" | fzf --prompt 'Days back to summarize >'|
 
 
 sum_expected_minus_actual=0
+sum_ratio_actual_over_estimate=0
 len=0
 for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do 
 	if [ ! -f $t/:time=* ]; then
@@ -32,6 +33,9 @@ for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do
 	echo
 	len=$((len + 1))
 	sum_expected_minus_actual=$(dc -e "$time $time_worked - $sum_expected_minus_actual + p" | sed 's/-/_/g')
+	sum_ratio_actual_over_estimate=$(dc -e "$ratio_actual_over_estimate $sum_ratio_actual_over_estimate + p")
 done
 avg_expected_minus_actual=$(dc -e "2 k $sum_expected_minus_actual $len / p")
+avg_ratio_actual_over_estimate=$(dc -e "2 k $sum_ratio_actual_over_estimate $len / p")
 echo 'Average hours over(+)/under(-)estimated:	'$avg_expected_minus_actual
+echo 'Average hours worked as % of estimate:	'$avg_ratio_actual_over_estimate
