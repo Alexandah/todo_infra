@@ -24,8 +24,11 @@ for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do
 		continue
 	fi
 	time_worked=$(echo $t/:time_worked=* | sed 's/^.\+=//g' | tr -d 'h')
+	error=$(dc -e "$time $time_worked - p")
+	#ratio_error_over_estimate=$(dc -e "2 k $(echo $error | sed 's/-/_/g') $time / p")
+	ratio_actual_over_estimate=$(dc -e "2 k $time_worked $time / p")
 	echo "$(basename $t)"
-	echo "	expected: $time	actual: $time_worked	error: $(dc -e "$time $time_worked - p")"
+	echo "	expected: $time	actual: $time_worked	error: $error	%-more-or-less: $ratio_actual_over_estimate"
 	echo
 	len=$((len + 1))
 	sum_expected_minus_actual=$(dc -e "$time $time_worked - $sum_expected_minus_actual + p" | sed 's/-/_/g')
