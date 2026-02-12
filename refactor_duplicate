@@ -1,0 +1,31 @@
+#!/bin/bash
+set -e
+
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+
+taskdir_path=$(realpath "$1")
+taskdir_name=$(basename "$taskdir_path")
+
+exit_if_dir_outside_of_todo_system "$taskdir_path"
+
+num_duplicates=$(cat <<EOF | fzf --prompt "Duplicate $taskdir_name into N copies -- N=" --ghost 2
+2
+3
+4
+5
+6
+7
+8
+9
+EOF
+)
+
+for i in $(seq 2 $num_duplicates); do
+	dup_path="$taskdir_path"_$i
+	dup_name=$(basename "$dup_path")
+	cp -r "$taskdir_path" "$dup_path"
+	mv "$dup_path"/::*.hmm "$dup_path"/::"$dup_name".hmm
+done
+mv "$taskdir_path"/::*.hmm "$taskdir_path"/::"$taskdir_name"_1.hmm
+mv "$taskdir_path" "$taskdir_path"_1

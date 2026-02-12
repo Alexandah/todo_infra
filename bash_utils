@@ -32,3 +32,37 @@ crash_if_nonzero_exit() {
 	fi
 	return 0
 }
+
+exit_if_dir_outside_of_todo_system() {
+	local taskdir_path=$(realpath "$1")
+	local taskdir_name=$(basename "$taskdir_path")
+	local categories_dir=$(dirname $(dirname $(realpath $(which $0))))
+
+	# Check if taskdir is a directory
+	if [ ! -d "$taskdir_path" ]; then
+		echo "Error: $taskdir_path is not a directory"
+		exit 1
+	fi
+	# Check if taskdir is in the todo area (but not a category directory itself)
+	if find $categories_dir/* -name .infra -prune -o -type d | grep -q "$taskdir_path" ; then
+		# Additional check: prevent moving category directories themselves or the todo root
+		taskdir_basename=$(basename "$taskdir_path")
+		category_parent=$(dirname "$taskdir_path")
+		
+		# Prevent moving the todo root directory itself
+		if [ "$taskdir_path" = "$categories_dir" ]; then
+			echo "Error: Cannot move the todo root directory"
+			exit 1
+		fi
+		
+		# Prevent moving immediate children of todo root (category directories)
+		if [ "$category_parent" = "$categories_dir" ] && [ "$taskdir_basename" != ".infra" ]; then
+			echo "Error: Cannot move category directory '$taskdir_basename'"
+			exit 1
+		fi
+		: #taskdir is in todo area and not a category dir, it's ok to move it
+	else
+		echo "Error: taskdir path not under todo root: $categories_dir"
+		exit 1
+	fi
+}

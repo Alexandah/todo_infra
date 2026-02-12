@@ -68,10 +68,11 @@ touch $taskdir/:time=${estimated_time}h
 cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/log.do
 chmod +x $taskdir/log.do
 
-do_it_now_cutoff=0.25	#15 minutes
-if (( $(echo "$estimated_time <= $do_it_now_cutoff" | bc -l) )); then #if the goal can be done quickly, do it now
-	"$HERE"/mark $taskdir 0_now
-	taskdir=$(find "$TODOROOT/0_now" -type f -name "$goal.hmm" -exec dirname {} \; | head -n 1)
-fi
+#Toggling off for now, to ensure no edge-case conflict with the new refactor_split taskdir operation
+#do_it_now_cutoff=0.25	#15 minutes
+#if (( $(echo "$estimated_time <= $do_it_now_cutoff" | bc -l) )); then #if the goal can be done quickly, do it now
+#	"$HERE"/mark $taskdir 0_now
+#	taskdir=$(find "$TODOROOT/0_now" -type f -name "$goal.hmm" -exec dirname {} \; | head -n 1)
+#fi
 
 echo $taskdir

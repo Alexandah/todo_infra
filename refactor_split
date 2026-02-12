@@ -1,0 +1,49 @@
+#!/bin/bash
+set -e
+
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+
+taskdir_path=$(realpath "$1")
+taskdir_name=$(basename "$taskdir_path")
+
+exit_if_dir_outside_of_todo_system "$taskdir_path"
+
+num_resultants=$(cat <<EOF | fzf --prompt "Split $taskdir_name into N taskdirs -- N=" --ghost 2
+2
+3
+4
+5
+6
+7
+8
+9
+EOF
+)
+
+#split off & customize duplicates
+for i in $(seq 2 $num_resultants); do
+	crash_if_nonzero_exit make_taskdir "splitting ~ $taskdir_name"
+	splitoff_taskdir_path="$STDOUT"
+	splitoff_taskdir_name=$(basename "$splitoff_taskdir_path")
+	splitoff_taskdir_hmm=$(basename "$splitoff_taskdir_path"/::*.hmm)
+	#splitoff_taskdir_dueby="$splitoff_taskdir_path"/:by_?		# N/A
+	splitoff_taskdir_time=$(basename "$splitoff_taskdir_path"/:time=*h)
+	splitoff_taskdir_log_path="$splitoff_taskdir_path"/log.do
+
+	dup_path="$taskdir_path"_tmp
+	dup_parent_dir=$(dirname "$dup_path")
+	dup_name=$(basename "$dup_path")
+	cp -r "$taskdir_path" "$dup_path"
+
+	mv "$dup_path"/::*.hmm "$dup_path"/"$splitoff_taskdir_hmm"
+	mv -f "$dup_path"/:time=*h "$dup_path"/"$splitoff_taskdir_time" || true
+	mv -f "$splitoff_taskdir_log_path" "$dup_path"/log.do
+
+	rm -r "$splitoff_taskdir_path"
+	mv "$dup_path" "$dup_parent_dir"/"$splitoff_taskdir_name"
+done
+
+#TODO: 2 fzf dialogs to offer refactoring the original taskdir name & estimate
+#mv "$taskdir_path"/::*.hmm "$taskdir_path"/::"$taskdir_name"_1.hmm
+#mv "$taskdir_path" "$taskdir_path"_1
