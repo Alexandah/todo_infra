@@ -4,13 +4,17 @@ set -e
 todo_root=$(dirname $(dirname $(realpath $(which "$0"))))
 DONE="$todo_root/done"
 
-days_back_options=$(
-	echo '7 days'
-	echo '14 days'
-	echo '30 days'
-	echo '90 days'
-)
-days_back=$(echo "$days_back_options" | fzf --prompt 'Days back to summarize >'| awk '{print $1}')
+if [ -n "$1" ]; then
+	days_back="$1"
+else
+	days_back_options=$(
+		echo '7 days'
+		echo '14 days'
+		echo '30 days'
+		echo '90 days'
+	)
+	days_back=$(echo "$days_back_options" | fzf --prompt 'Days back to summarize >' | awk '{print $1}')
+fi
 
 
 sum_expected_minus_actual=0
