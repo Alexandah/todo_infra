@@ -9,7 +9,9 @@ taskdir_name=$(basename "$taskdir_path")
 
 exit_if_dir_outside_of_todo_system "$taskdir_path"
 
-num_duplicates=$(cat <<EOF | fzf --prompt "Duplicate $taskdir_name into N copies -- N=" --ghost 2
+#AMD fzf version lacks --ghost arg
+#num_duplicates=$(cat <<EOF | fzf --prompt "Duplicate $taskdir_name into N copies -- N=" --ghost 2
+num_duplicates=$(cat <<EOF | fzf --prompt "Duplicate $taskdir_name into N copies -- N="
 2
 3
 4
