@@ -5,7 +5,11 @@ HERE=$(dirname $(realpath $(which "$0")))
 source "$HERE"/bash_utils
 
 taskdir_path=$(realpath "$1")
+taskdir_parent_dir=$(dirname "$taskdir_path")
 taskdir_name=$(basename "$taskdir_path")
+taskdir_hmm=$(basename "$taskdir_path"/::*.hmm)
+taskdir_goal=$(echo "$taskdir_hmm" | sed 's/^:://g' | sed 's/\.hmm$//g')
+taskdir_time=$(basename "$taskdir_path"/:time=*h)
 
 exit_if_dir_outside_of_todo_system "$taskdir_path"
 
@@ -27,7 +31,7 @@ for i in $(seq 2 $num_resultants); do
 	splitoff_taskdir_path="$STDOUT"
 	splitoff_taskdir_name=$(basename "$splitoff_taskdir_path")
 	splitoff_taskdir_hmm=$(basename "$splitoff_taskdir_path"/::*.hmm)
-	#splitoff_taskdir_dueby="$splitoff_taskdir_path"/:by_?		# N/A
+	#N/A	#splitoff_taskdir_dueby="$splitoff_taskdir_path"/:by_?		
 	splitoff_taskdir_time=$(basename "$splitoff_taskdir_path"/:time=*h)
 	splitoff_taskdir_log_path="$splitoff_taskdir_path"/log.do
 
@@ -37,13 +41,63 @@ for i in $(seq 2 $num_resultants); do
 	cp -r "$taskdir_path" "$dup_path"
 
 	mv "$dup_path"/::*.hmm "$dup_path"/"$splitoff_taskdir_hmm"
-	mv -f "$dup_path"/:time=*h "$dup_path"/"$splitoff_taskdir_time" || true
+	mv -f "$dup_path"/:time=*h "$dup_path"/"$splitoff_taskdir_time" || true	#to prevent crash just bc time file of same amt already exists
 	mv -f "$splitoff_taskdir_log_path" "$dup_path"/log.do
 
 	rm -r "$splitoff_taskdir_path"
 	mv "$dup_path" "$dup_parent_dir"/"$splitoff_taskdir_name"
 done
 
-#TODO: 2 fzf dialogs to offer refactoring the original taskdir name & estimate
-#mv "$taskdir_path"/::*.hmm "$taskdir_path"/::"$taskdir_name"_1.hmm
-#mv "$taskdir_path" "$taskdir_path"_1
+#modify original taskdir
+set +e
+run 'echo "$taskdir_goal" | fzf --prompt="WRITE_GOAL -- 1-3 concrete sentences >" --header="Keep or Refactor original taskdir?" --print-query'
+exit_code=$?
+echo "$STDOUT"
+if [ "$exit_code" -gt "1" ] ; then
+    echo "ERROR: fzf had unexpected exit code: $exit_code" >&2
+	exit "$exit_code"
+fi
+goal=$(
+	echo "$STDOUT" | 
+	xargs | #trim leading/trailing whitespace
+	sed 's/\s\+/_/g' #replace delimiting whitespace with _
+)
+if [ -z "$goal" ] ; then #no empty goals allowed
+	echo 'ERROR: Goal cannot be empty string.' >&2
+	exit 1
+fi
+
+set +e
+estimated_time_suggestions=$(
+	echo "0.03       2m"
+	echo "0.08       5m"
+	echo "0.11       7m"
+	echo "0.17       10m"
+	echo "0.25       15m"
+	echo "0.33       20m"
+	echo "0.41       25m"
+	echo "0.50       30m"
+	echo "0.75       45m"
+	echo "1          1h"
+	echo "1.25       1h 15m"
+	echo "1.50       1h 30m"
+	echo "1.75       1h 45m"
+	echo "2          2h"
+    #anything larger is sus, since it is unlikely to fit within 1 ultradian-- suggests it should prob be broken into separate tasks
+	#echo "3          3h"
+	#echo "4          4h"
+	#echo "5          5h"
+	#echo "6          6h"
+	#echo "7          7h"
+	#echo "8          8h"
+	#echo "9          9h"
+	#echo "10         10h"
+)
+crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" --ghost "$taskdir_time"'
+PLANNING_FALLACY_PENALTY=1.65 #planning fallacy penalty: assume things will take much longer than you think-- constant to multiply time estimates by
+estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $PLANNING_FALLACY_PENALTY * p") 
+
+set -e
+mv -f "$taskdir_path"/::*.hmm "$taskdir_path"/::"$goal".hmm || true	#to prevent crash just bc kept original goal description 
+mv -f "$taskdir_path"/:time=*h "$taskdir_path"/:time="$estimated_time"h || true	#to prevent crash just bc time file of same amt already exists
+mv -T "$taskdir_path" "$taskdir_parent_dir"/"$goal" || true	#to prevent crash just bc kept original goal description 
