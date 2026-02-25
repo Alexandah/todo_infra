@@ -127,6 +127,7 @@ update_due_by() {
 			tail -n+3 | 
 			xargs |
 			tr ' ' '\n' |
+			tac |
 			fzf --prompt="DUE_BY -- $taskdir_name >" | 
 			sed 's/\s\+/_/g' | 
 			sed 's/_[a-zA-Z]\+$//g'
@@ -141,7 +142,7 @@ update_due_by() {
 		local month=$(
 			echo -e '1 January\n2 February\n3 March\n4 April\n5 May\n6 June\n7 July\n8 August\n9 September\n10 October\n11 November\n12 December\n13 EoY'
 		)
-		crash_if_nonzero_exit 'echo "$month" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
+		crash_if_nonzero_exit 'echo "$month" | tac | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
 		month=$(echo "$STDOUT" | cut -d ' ' -f2)
 		if [ "$month" = "EoY" ] ; then
 			#due_by="EoY"
@@ -171,6 +172,7 @@ update_due_by() {
 				tail -n+3 | 
 				xargs |
 				tr ' ' '\n' |
+				tac |
 				fzf --prompt="DUE_BY -- $taskdir_name >" | 
 				sed 's/\s\+/_/g' | 
 				sed 's/_[a-zA-Z]\+$//g'
