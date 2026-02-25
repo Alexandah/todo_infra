@@ -67,6 +67,8 @@ touch $taskdir/:by_?
 touch $taskdir/:time=${estimated_time}h
 cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/log.do
 chmod +x $taskdir/log.do
+cp "$HERE"/_claude.do $taskdir/_claude.do
+chmod +x $taskdir/_claude.do
 
 #Toggling off for now, to ensure no edge-case conflict with the new refactor_split taskdir operation
 #do_it_now_cutoff=0.25	#15 minutes
