@@ -13,7 +13,9 @@ taskdir_time=$(basename "$taskdir_path"/:time=*h)
 
 exit_if_dir_outside_of_todo_system "$taskdir_path"
 
-num_resultants=$(cat <<EOF | fzf --prompt "Split $taskdir_name into N taskdirs -- N=" --ghost 2
+#AMD fzf version lacks --ghost arg
+#num_resultants=$(cat <<EOF | fzf --prompt "Split $taskdir_name into N taskdirs -- N=" --ghost 2
+num_resultants=$(cat <<EOF | fzf --prompt "Split $taskdir_name into N taskdirs -- N="
 2
 3
 4
@@ -27,7 +29,7 @@ EOF
 
 #split off & customize duplicates
 for i in $(seq 2 $num_resultants); do
-	crash_if_nonzero_exit make_taskdir "splitting ~ $taskdir_name"
+	crash_if_nonzero_exit '"$HERE"/make_taskdir "splitting ~ $taskdir_name"'
 	splitoff_taskdir_path="$STDOUT"
 	splitoff_taskdir_name=$(basename "$splitoff_taskdir_path")
 	splitoff_taskdir_hmm=$(basename "$splitoff_taskdir_path"/::*.hmm)
@@ -93,7 +95,9 @@ estimated_time_suggestions=$(
 	#echo "9          9h"
 	#echo "10         10h"
 )
-crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" --ghost "$taskdir_time"'
+#AMD fzf version lacks --ghost arg
+#crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" --ghost "$taskdir_time"'
+crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA"'
 PLANNING_FALLACY_PENALTY=1.65 #planning fallacy penalty: assume things will take much longer than you think-- constant to multiply time estimates by
 estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $PLANNING_FALLACY_PENALTY * p") 
 
