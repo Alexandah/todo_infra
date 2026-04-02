@@ -107,15 +107,24 @@ update_due_by() {
 		crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac $fzf_gap_arg'
 		due_by=$STDOUT
 	elif [ "$destination_category" = "2_week" ] ; then
-		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
-		local day_of_month=$(date | awk '{print $3}')
-		local days_of_week=$(
-			cal -m | 
-			grep " $day_of_month " | 
-			awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}' 
-		)
+		#local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
+		#local day_of_month=$(date | awk '{print $3}')
+		#local days_of_week=$(
+		#	cal -m | 
+		#	grep " $day_of_month " | 
+		#	awk '{print "M "$1"\nTu "$2"\nW "$3"\nTh "$4"\nF "$5"\nSa "$6"\nSu "$7}' 
+		#)
+		local days_of_week=$(cat <<EOF
+F
+Th
+W
+Tu
+M
+EOF
+        )
 		crash_if_nonzero_exit 'echo "$days_of_week" | fzf --prompt="DUE_BY -- $taskdir_name >" $fzf_gap_arg'
-		due_by=$(echo $STDOUT | sed 's/\s\+/_/g')_$month
+		#due_by=$(echo $STDOUT | sed 's/\s\+/_/g')_$month
+		due_by=$(echo $STDOUT | sed 's/\s\+/_/g')
 	elif [ "$destination_category" = "3_month" ] ; then
 		local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
 		#local cal_line=$(
