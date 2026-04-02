@@ -1,0 +1,95 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+source "$HERE"/okr_utils
+
+# 1. Level selection (default: quarterly)
+crash_if_nonzero_exit 'printf "quarterly\nyearly" | fzf --prompt="OKR Level >" $fzf_gap_arg'
+level="$STDOUT"
+
+YEAR=$CURRENT_YEAR
+
+if [ "$level" = "quarterly" ]; then
+    QUARTER=$CURRENT_QUARTER
+
+    # Browse yearly KRs to nest under
+    yearly_krs=""
+    for obj_dir in "$OKR_ROOT/$YEAR"/*/; do
+        [ -d "$obj_dir" ] || continue
+        obj_name=$(basename "$obj_dir")
+        [[ "$obj_name" == __TEMPLATE_* ]] && continue
+        for kr_dir in "$obj_dir"*/; do
+            [ -d "$kr_dir" ] || continue
+            kr_name=$(basename "$kr_dir")
+            [[ "$kr_name" == __TEMPLATE_* ]] && continue
+            [[ "$kr_name" == Q[1-4] ]] && continue
+            yearly_krs+="${kr_dir}"$'\n'
+        done
+    done
+    yearly_krs=$(echo "$yearly_krs" | sed '/^\s*$/d')
+
+    if [ -z "$yearly_krs" ]; then
+        echo "ERROR: No yearly KRs found under $OKR_ROOT/$YEAR. Create yearly OKRs first." >&2
+        exit 1
+    fi
+
+    # Show relative paths for readability, resolve back to absolute after selection
+    yearly_krs_display=$(echo "$yearly_krs" | sed "s|^$OKR_ROOT/$YEAR/||")
+    crash_if_nonzero_exit 'echo "$yearly_krs_display" | fzf --prompt="Nest under yearly KR >" $fzf_gap_arg'
+    yearly_kr_dir="$OKR_ROOT/$YEAR/${STDOUT%/}"
+
+    BASE_DIR="$yearly_kr_dir/Q${QUARTER}"
+    mkdir -p "$BASE_DIR"
+else
+    BASE_DIR="$OKR_ROOT/$YEAR"
+    mkdir -p "$BASE_DIR"
+fi
+
+# Objective name
+run 'echo "" | fzf --prompt="Objective name >" --print-query $fzf_gap_arg'
+exit_code=$?
+if [ "$exit_code" -gt 1 ]; then exit "$exit_code"; fi
+obj_name=$(echo "$STDOUT" | xargs | sed 's/\s\+/_/g')
+if [ -z "$obj_name" ]; then
+    echo "ERROR: Objective name cannot be empty." >&2
+    exit 1
+fi
+
+# KR names (repeat until empty or ESC)
+kr_names=()
+while true; do
+    run 'echo "" | fzf --prompt="KR for $obj_name >" --print-query $fzf_gap_arg'
+    exit_code=$?
+    if [ "$exit_code" -gt 1 ]; then break; fi
+    kr_name=$(echo "$STDOUT" | xargs | sed 's/\s\+/_/g')
+    if [ -z "$kr_name" ]; then break; fi
+    kr_names+=("$kr_name")
+done
+
+if [ ${#kr_names[@]} -eq 0 ]; then
+    echo "ERROR: Must specify at least one KR." >&2
+    exit 1
+fi
+
+# KR type (once for all)
+crash_if_nonzero_exit 'printf "committed\naspirational" | fzf --prompt="OKR commitment level >" $fzf_gap_arg'
+kr_type="$STDOUT"
+
+# Create directories and files
+obj_dir="$BASE_DIR/$obj_name"
+mkdir -p "$obj_dir"
+echo
+
+for kr in "${kr_names[@]}"; do
+    kr_dir="$obj_dir/$kr"
+    mkdir -p "$kr_dir"
+    touch "$kr_dir/progress"
+    touch "$kr_dir/:$kr_type"
+    if [ "$level" = "yearly" ]; then
+        mkdir -p "$kr_dir/Q1" "$kr_dir/Q2" "$kr_dir/Q3" "$kr_dir/Q4"
+    fi
+    echo "  Created: $kr_dir"
+done
+
+echo
+echo "OKR created: $obj_name (${#kr_names[@]} KRs, $kr_type)"
