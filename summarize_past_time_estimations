@@ -20,26 +20,55 @@ fi
 sum_expected_minus_actual=0
 sum_ratio_actual_over_estimate=0
 len=0
-for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do 
-	if [ ! -f $t/:time=* ]; then
-		continue
+for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do
+	# Prefer .time_orig (set by log_time.do) as the original estimate; fall back to :time=*
+	orig_file="$t/.time_orig"
+	if [ -f "$orig_file" ]; then
+		time=$(cat "$orig_file")
+	else
+		tf=("$t"/:time=*)
+		[ -f "${tf[0]}" ] || continue
+		time="${tf[0]##*=}"; time="${time%h}"
 	fi
-	time=$(echo $t/:time=* | sed 's/^.\+=//g' | tr -d 'h')
-	if [ ! -f $t/:time_worked=* ]; then
-		continue
-	fi
-	time_worked=$(echo $t/:time_worked=* | sed 's/^.\+=//g' | tr -d 'h')
-	error=$(dc -e "$time $time_worked - p")
-	#ratio_error_over_estimate=$(dc -e "2 k $(echo $error | sed 's/-/_/g') $time / p")
-	ratio_actual_over_estimate=$(dc -e "2 k $time_worked $time / p")
+	twf=("$t"/:time_worked=*)
+	[ -f "${twf[0]}" ] || continue
+	time_worked="${twf[0]##*=}"; time_worked="${time_worked%h}"
+	error=$(echo "scale=2; $time - $time_worked" | bc)
+	ratio_actual_over_estimate=$(echo "scale=2; $time_worked / $time" | bc)
 	echo "$(basename $t)"
 	echo "	expected: $time	actual: $time_worked	error: $error	%-more-or-less: $ratio_actual_over_estimate"
 	echo
 	len=$((len + 1))
-	sum_expected_minus_actual=$(dc -e "$time $time_worked - $sum_expected_minus_actual + p" | sed 's/-/_/g')
-	sum_ratio_actual_over_estimate=$(dc -e "$ratio_actual_over_estimate $sum_ratio_actual_over_estimate + p")
+	sum_expected_minus_actual=$(echo "scale=2; $time - $time_worked + $sum_expected_minus_actual" | bc)
+	sum_ratio_actual_over_estimate=$(echo "scale=2; $ratio_actual_over_estimate + $sum_ratio_actual_over_estimate" | bc)
 done
-avg_expected_minus_actual=$(dc -e "2 k $sum_expected_minus_actual $len / p")
-avg_ratio_actual_over_estimate=$(dc -e "2 k $sum_ratio_actual_over_estimate $len / p")
-echo 'Average hours over(+)/under(-)estimated:	'$avg_expected_minus_actual
-echo 'Average hours worked as % of estimate:	'$avg_ratio_actual_over_estimate
+
+# Incomplete tasks (still in active queues) count as underestimated by their full estimate
+for t in $(find "$todo_root"/{0_now,1_today,2_week} -mindepth 1 -type d 2>/dev/null); do
+	# Prefer .time_orig as the original estimate; fall back to :time=*
+	orig_file="$t/.time_orig"
+	if [ -f "$orig_file" ]; then
+		time=$(cat "$orig_file")
+	else
+		tf=("$t"/:time=*)
+		[ -f "${tf[0]}" ] || continue
+		time="${tf[0]##*=}"; time="${time%h}"
+	fi
+	error=$(echo "scale=2; 0 - $time" | bc)
+	ratio_actual_over_estimate=2  # assume overrun at 2x; actual time unknown
+	echo "$(basename $t) (INCOMPLETE)"
+	echo "	expected: $time	actual: ???	error: $error	%-more-or-less: $ratio_actual_over_estimate"
+	echo
+	len=$((len + 1))
+	sum_expected_minus_actual=$(echo "scale=2; 0 - $time + $sum_expected_minus_actual" | bc)
+	sum_ratio_actual_over_estimate=$(echo "scale=2; $ratio_actual_over_estimate + $sum_ratio_actual_over_estimate" | bc)
+done
+
+if [ "$len" -gt 0 ]; then
+	avg_expected_minus_actual=$(echo "scale=2; $sum_expected_minus_actual / $len" | bc)
+	avg_ratio_actual_over_estimate=$(echo "scale=2; $sum_ratio_actual_over_estimate / $len" | bc)
+	echo 'Average hours over(+)/under(-)estimated:	'$avg_expected_minus_actual
+	echo 'Average hours worked as % of estimate:	'$avg_ratio_actual_over_estimate
+else
+	echo 'No tasks with time estimates found.'
+fi
