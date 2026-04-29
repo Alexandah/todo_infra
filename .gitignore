@@ -4,5 +4,4 @@ process_inbox
 setup_terminals.sh
 setup_terminals_dwm.sh
 weekly_review
-weekly_review.py
 special_lf
