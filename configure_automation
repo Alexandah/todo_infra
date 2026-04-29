@@ -112,9 +112,10 @@ cd "\$taskdir"
 
 CLAUDE_ARGS="--model $model_choice${effort_choice:+ --effort $effort_choice} --permission-mode $perm_mode"
 
-# Attempt to continue most recent session in this directory
-if claude \$CLAUDE_ARGS --continue 2>/dev/null; then
-    exit 0
+# Resume by saved session ID if available
+if [ -f .last_session_id ]; then
+    session_id=\$(cat .last_session_id)
+    exec taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS --resume "\$session_id"
 fi
 
 # Build initial message for new session
@@ -140,13 +141,25 @@ Task notes:
 fi
 
 if [ -f "ACCEPTANCE_CRITERIA" ]; then
-    msg="\$msg
+    ac_content=\$(cat ACCEPTANCE_CRITERIA)
+    if echo "\$ac_content" | grep -q "^NEEDS_CLARIFICATION:"; then
+        msg="\$msg
+
+ACCEPTANCE CRITERIA (auto-generator flagged for clarification):
+\$ac_content
+
+Before implementation: try to resolve the clarification yourself using the goal, task notes, and repo context. If you can plausibly infer the missing detail, write 1-5 concrete, verifiable criteria back to ACCEPTANCE_CRITERIA and proceed. Ask the User only if the gap is genuinely irresolvable from context. Do not begin implementation until ACCEPTANCE_CRITERIA contains concrete criteria (replacing the NEEDS_CLARIFICATION line)."
+    else
+        msg="\$msg
 
 ACCEPTANCE CRITERIA:
-\$(cat ACCEPTANCE_CRITERIA)"
+\$ac_content
+
+Before implementation: sanity-check these against the goal and task notes. If they look off (don't match the goal, miss the point, or describe work already done), refine them yourself when you can; ask the User only if you genuinely can't tell what the right criteria are. Overwrite ACCEPTANCE_CRITERIA with the refined version before proceeding."
+    fi
 fi
 
-exec claude \$CLAUDE_ARGS "\$msg"
+exec taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
 TEMPLATE
 chmod +x "$TASKDIR/_claude.do"
 echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --permission-mode $perm_mode)"
@@ -155,13 +168,14 @@ echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --per
 crash_if_nonzero_exit \
     'printf "no\nyes — mark as ready for auto-pickup" | fzf \
         --prompt="SIGNAL FILE > " \
-        --header="Creates ;claude_plz_do_this (chmod +x) so automation can detect this task" '"$fzf_gap_arg"
+        --header="Creates ;claude_plz_do_this (chmod +x) after acceptance criteria pass" '"$fzf_gap_arg"
 signal_choice="$STDOUT"
 
+# Record choice — signal file is created by the background process after criteria pass
+want_signal=0
 if [[ "$signal_choice" == yes* ]]; then
-    touch "$TASKDIR/;claude_plz_do_this"
-    chmod +x "$TASKDIR/;claude_plz_do_this"
-    echo "Created ;claude_plz_do_this"
+    want_signal=1
+    echo "Signal file will be created after acceptance criteria pass"
 fi
 
 echo ""
@@ -169,6 +183,8 @@ echo "Configuration complete. Run ./_claude.do to launch Claude for this task."
 echo ""
 
 # ── Acceptance criteria (fully detached via setsid — no terminal interference) ─
+# If user requested signal file, it is created here AFTER criteria generate
+# successfully and do NOT contain NEEDS_CLARIFICATION.
 ac_goal_filename=$(basename "$goal_file")
 ac_prompt_file=$(mktemp)
 cat > "$ac_prompt_file" << ENDPROMPT
@@ -185,9 +201,21 @@ NEEDS_CLARIFICATION: <explanation of what additional details are needed>
 Output only the criteria list or the NEEDS_CLARIFICATION line — no headings, no other text.
 ENDPROMPT
 
-setsid bash -c \
-    'cd "$3" && tmp=$(mktemp) && claude --print --model sonnet --effort low --add-dir "$3" -- "$(cat "$1")" > "$tmp" && mv "$tmp" "$2" || rm -f "$tmp"; rm -f "$1"' \
-    _ "$ac_prompt_file" "$TASKDIR/ACCEPTANCE_CRITERIA" "$TASKDIR" \
+setsid bash -c '
+    cd "$4"
+    tmp=$(mktemp)
+    if claude --print --model sonnet --effort low --add-dir "$4" -- "$(cat "$1")" > "$tmp" 2>/dev/null; then
+        mv "$tmp" "$2"
+        # Create signal file only if criteria passed and user requested it
+        if [ "$3" = "1" ] && ! grep -q "^NEEDS_CLARIFICATION:" "$2"; then
+            touch "$4/;claude_plz_do_this"
+            chmod +x "$4/;claude_plz_do_this"
+        fi
+    else
+        rm -f "$tmp"
+    fi
+    rm -f "$1"
+' _ "$ac_prompt_file" "$TASKDIR/ACCEPTANCE_CRITERIA" "$want_signal" "$TASKDIR" \
     < /dev/null > /dev/null 2>&1 &
 echo "Acceptance criteria generating in background → ACCEPTANCE_CRITERIA"
 

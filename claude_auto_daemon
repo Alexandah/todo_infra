@@ -1,0 +1,47 @@
+#!/bin/bash
+# claude_auto_daemon — watches for ;claude_plz_do_this signal files and
+# auto-launches Claude Code sessions via claude_task.
+# Uses inotifywait to monitor all time-scale task categories.
+set -e
+
+CATEGORIES_DIR="$HOME/main/todo"
+WATCH_DIRS=(
+    "$CATEGORIES_DIR/0_now"
+    "$CATEGORIES_DIR/1_today"
+    "$CATEGORIES_DIR/2_week"
+    "$CATEGORIES_DIR/3_month"
+    "$CATEGORIES_DIR/4_year"
+    "$CATEGORIES_DIR/new"
+)
+
+# Verify watch dirs exist
+for d in "${WATCH_DIRS[@]}"; do
+    if [ ! -d "$d" ]; then
+        echo "Warning: $d does not exist, skipping" >&2
+    fi
+done
+
+echo "$(date +%H:%M:%S) Claude auto-daemon started"
+echo "Watching: ${WATCH_DIRS[*]}"
+
+inotifywait -m -r -e create -e moved_to \
+    --format '%w %f %e' \
+    "${WATCH_DIRS[@]}" 2>/dev/null |
+while read -r dir file events; do
+    path="${dir}${file}"
+
+    # Case 1: directory moved/created — check for signal file inside
+    if [[ "$events" == *"ISDIR"* ]] && [ -f "$path/;claude_plz_do_this" ]; then
+        echo "$(date +%H:%M:%S) Auto-trigger (dir): $path"
+        rm -f "$path/;claude_plz_do_this"
+        claude_task "$path" &
+    fi
+
+    # Case 2: signal file created directly inside an existing taskdir
+    if [ "$file" = ";claude_plz_do_this" ]; then
+        taskdir="${dir%/}"
+        echo "$(date +%H:%M:%S) Auto-trigger (signal): $taskdir"
+        rm -f "$taskdir/;claude_plz_do_this"
+        claude_task "$taskdir" &
+    fi
+done

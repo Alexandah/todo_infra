@@ -1,0 +1,57 @@
+#!/bin/bash
+# taskdir_tmux_launch — Launch a Claude Code session for a taskdir inside a
+# managed tmux pane in the claude-dash dashboard.
+#
+# Usage: taskdir_tmux_launch <taskdir_path> <claude_args...>
+set -e
+
+taskdir="${1:?Usage: taskdir_tmux_launch <taskdir_path> <claude_args...>}"
+taskdir=$(cd "$taskdir" && pwd)
+shift
+
+# If already inside a managed tmux pane, run claude directly
+if [ -n "$CLAUDE_TMUX_MANAGED" ]; then
+    cd "$taskdir"
+    exec claude "$@"
+fi
+
+# --- Derive pane name from ::*.hmm ---
+goal_file=$(ls "$taskdir"/::*.hmm 2>/dev/null | head -1)
+if [ -n "$goal_file" ]; then
+    pane_name=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ' | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+else
+    pane_name=$(basename "$taskdir" | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+fi
+[ -z "$pane_name" ] && pane_name="claude-task"
+
+# --- Source dashboard helpers ---
+source "$HOME/.claude/hooks/tmux-helpers.sh"
+dash_ensure_session
+
+# --- Handle name collisions ---
+base_name="$pane_name"
+suffix=1
+while true; do
+    collision=$(tmux list-panes -t "$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW" \
+        -F '#{@task_name}' 2>/dev/null | grep -cxF "$pane_name" || true)
+    [ "$collision" = "0" ] && break
+    suffix=$((suffix + 1))
+    pane_name="${base_name}-${suffix}"
+done
+
+# --- Build the command to run inside the tmux pane ---
+escaped_args=""
+for arg in "$@"; do
+    escaped_args="$escaped_args '$(echo "$arg" | sed "s/'/'\\\\''/g")'"
+done
+
+cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1 && exec claude $escaped_args"
+
+# Create new pane in the running column
+dash_add_task running "$pane_name" "$cmd"
+
+# If interactive (tty), attach to the dashboard session
+if [ -t 0 ]; then
+    exec tmux attach-session -t "$CLAUDE_DASH_SESSION"
+fi
+# Otherwise (auto-triggered), exit silently — pane runs detached

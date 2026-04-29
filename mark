@@ -88,24 +88,25 @@ update_due_by() {
 	elif [ "$destination_category" = "maybe" ] ; then
 		due_by='?'
 	elif [ "$destination_category" = "1_today" ] ; then
-		local times=$(
-			for h in {0..23}; do 
-				for m in " " :30; do 
-					if [ $h -eq 0 ]; then
-						printf "12%s_am\n" $m
-					elif [ $h -lt 12 ]; then
-						printf "%01d%s_am\n" $h $m
-					elif [ $h -eq 12 ]; then
-						printf "12%s_pm\n" $m
-					else
-						printf "%01d%s_pm\n" $((h-12)) $m
-					fi
-				done
-			done 
-		)
+		due_by=$current_due_by
+		#local times=$(
+		#	for h in {0..23}; do 
+		#		for m in " " :30; do 
+		#		if [ $h -eq 0 ]; then
+		#			printf "12%s_am\n" $m
+		#		elif [ $h -lt 12 ]; then
+		#			printf "%01d%s_am\n" $h $m
+		#		elif [ $h -eq 12 ]; then
+		#			printf "12%s_pm\n" $m
+		#		else
+		#			printf "%01d%s_pm\n" $((h-12)) $m
+		#		fi
+		#	done
+		#	done 
+		#)
 		#due_by=$(echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac --gap=1)
-		crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac $fzf_gap_arg'
-		due_by=$STDOUT
+		#crash_if_nonzero_exit 'echo "$times" | fzf --prompt="DUE_BY -- $taskdir_name >" --tac $fzf_gap_arg'
+		#due_by=$STDOUT
 	elif [ "$destination_category" = "2_week" ] ; then
 		#local month=$(cal | head -n1 | awk '{print $1}' | grep -o '^....')
 		#local day_of_month=$(date | awk '{print $3}')

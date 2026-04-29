@@ -1,12 +1,17 @@
 #!/bin/bash
 # claude_task — Launch a Claude Code session for a taskdir
+# Uses taskdir_tmux_launch for managed tmux window placement.
 set -e
 
 taskdir="${1:?Usage: claude_task <taskdir_path>}"
+taskdir=$(cd "$taskdir" && pwd)
 cd "$taskdir"
 
-# Always attempt to continue previous session first
-claude --continue 2>/dev/null && exit 0
+# Resume by saved session ID if available
+if [ -f .last_session_id ]; then
+    session_id=$(cat .last_session_id)
+    exec taskdir_tmux_launch "$taskdir" --resume "$session_id"
+fi
 
 # No previous session — start new with taskdir context
 goal_file=$(ls ::*.hmm 2>/dev/null | head -1)
@@ -31,4 +36,24 @@ $hmm_content"
     fi
 fi
 
-exec claude "$msg"
+# Include acceptance criteria if present
+if [ -f "ACCEPTANCE_CRITERIA" ]; then
+    ac_content=$(cat ACCEPTANCE_CRITERIA)
+    if echo "$ac_content" | grep -q "^NEEDS_CLARIFICATION:"; then
+        msg="$msg
+
+ACCEPTANCE CRITERIA (auto-generator flagged for clarification):
+$ac_content
+
+Before implementation: try to resolve the clarification yourself using the goal, task notes, and repo context. If you can plausibly infer the missing detail, write 1-5 concrete, verifiable criteria back to ACCEPTANCE_CRITERIA and proceed. Ask the User only if the gap is genuinely irresolvable from context. Do not begin implementation until ACCEPTANCE_CRITERIA contains concrete criteria (replacing the NEEDS_CLARIFICATION line)."
+    else
+        msg="$msg
+
+ACCEPTANCE CRITERIA:
+$ac_content
+
+Before implementation: sanity-check these against the goal and task notes. If they look off (don't match the goal, miss the point, or describe work already done), refine them yourself when you can; ask the User only if you genuinely can't tell what the right criteria are. Overwrite ACCEPTANCE_CRITERIA with the refined version before proceeding."
+    fi
+fi
+
+exec taskdir_tmux_launch "$taskdir" "$msg"
