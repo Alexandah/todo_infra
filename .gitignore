@@ -2,6 +2,5 @@ WEEKLY_REVIEW
 begin_daily_workflow
 process_inbox
 setup_terminals.sh
-setup_terminals_dwm.sh
 weekly_review
 special_lf
