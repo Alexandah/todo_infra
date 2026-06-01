@@ -66,8 +66,8 @@ touch $taskdir/::$goal.hmm
 touch $taskdir/:by_?
 touch $taskdir/:time=${estimated_time}h
 echo "$estimated_time" > $taskdir/.time_orig
-cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/log.do
-chmod +x $taskdir/log.do
+cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/.log.do
+chmod +x $taskdir/.log.do
 cat "$HERE"/log_time | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/log_time.do
 chmod +x $taskdir/log_time.do
 cp "$HERE"/configure_automation $taskdir/_configure_automation.do
@@ -81,8 +81,8 @@ chmod +x $taskdir/_configure_automation.do
 #fi
 
 # Setup link_okr.do for future OKR linking from lf
-cp "$HERE"/link_okr.do "$taskdir"/link_okr.do
-chmod +x "$taskdir"/link_okr.do
+cp "$HERE"/link_okr.do "$taskdir"/.link_okr.do
+chmod +x "$taskdir"/.link_okr.do
 
 # Prompt to link to OKR (link_to_okr has a [no link] default)
 (cd "$taskdir" && "$HERE"/link_to_okr)

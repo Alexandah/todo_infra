@@ -54,7 +54,7 @@ get_time_path() {
 taskdir_real=$(realpath "$taskdir")
 
 # Check if taskdir is in the todo area (but not a category directory itself)
-if find $categories_dir/* -name .infra -prune -o -type d | grep -q "$taskdir_real" ; then
+if find $categories_dir/* -name .infra -prune -o -name .claude -prune -o -type d | grep -q "$taskdir_real" ; then
 	# Additional check: prevent moving category directories themselves or the todo root
 	taskdir_basename=$(basename "$taskdir_real")
 	category_parent=$(dirname "$taskdir_real")
@@ -228,7 +228,7 @@ sum_time_estimates_per_category() {
 
 if [ "$category_to_set_non_interactively" = "NULL" ] ; then #INTERACTIVE MODE
 	categories=$(
-		find $categories_dir -mindepth 1 -maxdepth 1 -name .infra -o -name new -o -path '*wait/*' -o -name '#*' -prune -o -type d -printf "%f\n"
+		find $categories_dir -mindepth 1 -maxdepth 1 -name .infra -o -name .claude -o -name new -o -path '*wait/*' -o -name '#*' -prune -o -type d -printf "%f\n"
 	)
 	taskdir_time=$(
 		find $taskdir -name ':time=*' -exec basename {} \; |
@@ -340,11 +340,29 @@ if [ "$mark_as" = "done" ] ; then
 		#echo "7392       11mo"
 		#echo "8064       1y"
 	)
-	recorded_time=$(
-		echo "$time_suggestions" |
-		fzf --prompt="HOURS_WORKED -- $new_name >" --header="HOURS	   AKA" $fzf_gap_arg |
-		awk '{print $1}'
-	)
+	# BEGIN_AUTO_COMPUTE
+	_time_orig_file="$taskdir/.time_orig"
+	_time_remaining_path=$(find "$taskdir" -maxdepth 1 -name ':time=*' | head -n1)
+	_auto_recorded_time=""
+	if [[ -f "$_time_orig_file" && -n "$_time_remaining_path" ]]; then
+		_orig=$(cat "$_time_orig_file")
+		_remaining=$(basename "$_time_remaining_path" | sed 's/:time=//' | sed 's/h$//')
+		_diff=$(echo "scale=2; $_orig - $_remaining" | bc)
+		if (( $(echo "$_diff > 0" | bc -l) )); then
+			_auto_recorded_time="$_diff"
+		fi
+	fi
+	# END_AUTO_COMPUTE
+
+	if [[ -n "$_auto_recorded_time" ]]; then
+		recorded_time="$_auto_recorded_time"
+	else
+		recorded_time=$(
+			echo "$time_suggestions" |
+			fzf --prompt="HOURS_WORKED -- $new_name >" --header="HOURS	   AKA" $fzf_gap_arg |
+			awk '{print $1}'
+		)
+	fi
 	touch "$taskdir/:time_worked=${recorded_time}h"
 
 elif [ "$mark_as" = "0_now" ] ; then
