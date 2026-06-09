@@ -16,9 +16,11 @@ REPO    := $(CURDIR)
 HOOKS   := $(REPO)/claude_hooks
 SKILLS  := $(REPO)/claude_skills
 TMUXCONF:= $(REPO)/tmux.conf
+TODO_CLAUDE_MD := $(REPO)/CLAUDE.todo.md
 
 CLAUDE_HOOKS_DIR := $(HOME)/.claude/hooks
 TODO_CLAUDE_DIR  := $(HOME)/main/todo/.claude
+TODO_ROOT        := $(HOME)/main/todo
 HOME_TMUXCONF    := $(HOME)/.tmux.conf
 
 HOOK_NAMES := tmux-helpers.sh tmux-move-done.sh tmux-move-perms.sh \
@@ -44,6 +46,8 @@ install:
 	done
 	@$(call LINK,$(TMUXCONF),$(HOME_TMUXCONF))
 	@$(call LINK,$(SKILLS),$(TODO_CLAUDE_DIR)/skills)
+	@$(call LINK,$(TODO_CLAUDE_MD),$(TODO_ROOT)/CLAUDE.md)
+	@echo "note: ~/main/todo/CLAUDE.local.md is per-machine (not tracked); create it for machine-specific cross-system areas."
 	@echo "install: done"
 
 uninstall:
@@ -52,4 +56,5 @@ uninstall:
 	done
 	@if [ -L "$(HOME_TMUXCONF)" ]; then rm "$(HOME_TMUXCONF)"; echo "rm $(HOME_TMUXCONF)"; fi
 	@if [ -L "$(TODO_CLAUDE_DIR)/skills" ]; then rm "$(TODO_CLAUDE_DIR)/skills"; echo "rm $(TODO_CLAUDE_DIR)/skills"; fi
+	@if [ -L "$(TODO_ROOT)/CLAUDE.md" ]; then rm "$(TODO_ROOT)/CLAUDE.md"; echo "rm $(TODO_ROOT)/CLAUDE.md"; fi
 	@echo "uninstall: done"
