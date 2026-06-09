@@ -4,8 +4,8 @@ WORK_TIME_HRS=1
 WORK_TIME_MIN=35
 START_OF_WORK_TIME_BLOCK_MIN=15
 
-ENCOURAGING_MESSAGE="***Please work for ${START_OF_WORK_TIME_BLOCK_MIN} minutes, even if you are tired or feel pressed for time. This maintains the habit & makes consistent progress. You deserve this happiness.***"
-say "$ENCOURAGING_MESSAGE" &
+ENCOURAGING_MESSAGE="***Please work for ${START_OF_WORK_TIME_BLOCK_MIN} minutes, even if you are tired or feel pressed for time. This maintains the habit & makes consistent progress. You always feel satisfied and proud of yourself when you do this. You deserve this happiness.***"
+/home/erandalex/main/dev/misc_sh/say "$ENCOURAGING_MESSAGE" &
 
 SESSION="daily"
 
