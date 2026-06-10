@@ -7,20 +7,23 @@
 # install symlinks them to the locations Claude Code / tmux expect:
 #   ~/.claude/hooks/*.sh           <- settings.json references these
 #   ~/.tmux.conf
-#   ~/main/todo/.claude/skills     <- discovered by dir-hierarchy walk on launch
+#   <todo-root>/.claude/skills     <- discovered by dir-hierarchy walk on launch
 #
 # Idempotent: a correct existing symlink is left alone; a real file in the way
 # is backed up to <path>.bak before the symlink is created.
 
-REPO    := $(CURDIR)
+# Self-locating: REPO is the dir holding this Makefile (the .infra repo), and
+# the todo-system root is always its parent — so paths track wherever the repo
+# is checked out (e.g. ~/main/todo vs ~/main/doc/todo) with no per-machine edit.
+REPO    := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 HOOKS   := $(REPO)/claude_hooks
 SKILLS  := $(REPO)/claude_skills
 TMUXCONF:= $(REPO)/tmux.conf
 TODO_CLAUDE_MD := $(REPO)/CLAUDE.todo.md
 
 CLAUDE_HOOKS_DIR := $(HOME)/.claude/hooks
-TODO_CLAUDE_DIR  := $(HOME)/main/todo/.claude
-TODO_ROOT        := $(HOME)/main/todo
+TODO_ROOT        := $(realpath $(REPO)/..)
+TODO_CLAUDE_DIR  := $(TODO_ROOT)/.claude
 HOME_TMUXCONF    := $(HOME)/.tmux.conf
 
 HOOK_NAMES := tmux-helpers.sh tmux-move-done.sh tmux-move-perms.sh \
@@ -47,7 +50,7 @@ install:
 	@$(call LINK,$(TMUXCONF),$(HOME_TMUXCONF))
 	@$(call LINK,$(SKILLS),$(TODO_CLAUDE_DIR)/skills)
 	@$(call LINK,$(TODO_CLAUDE_MD),$(TODO_ROOT)/CLAUDE.md)
-	@echo "note: ~/main/todo/CLAUDE.local.md is per-machine (not tracked); create it for machine-specific cross-system areas."
+	@echo "note: $(TODO_ROOT)/CLAUDE.local.md is per-machine (not tracked); create it for machine-specific cross-system areas."
 	@echo "install: done"
 
 uninstall:
