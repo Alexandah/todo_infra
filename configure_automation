@@ -79,7 +79,7 @@ if [[ "$settings_choice" == yes* ]]; then
     (
         cd /tmp
         mkdir -p "$TASKDIR/.claude"
-        claude --permission-mode auto \
+        $CLAUDE_BIN --permission-mode auto \
 		--add-dir "$TASKDIR" \
 		-- \
 "You are helping configure .claude/settings.local.json for a Claude Code taskdir session.
@@ -115,7 +115,7 @@ CLAUDE_ARGS="--model $model_choice${effort_choice:+ --effort $effort_choice} --p
 # Resume by saved session ID if available
 if [ -f .last_session_id ]; then
     session_id=\$(cat .last_session_id)
-    exec taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS --resume "\$session_id"
+    exec $INFRA/taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS --resume "\$session_id"
 fi
 
 # Build initial message for new session
@@ -159,7 +159,7 @@ Before implementation: sanity-check these against the goal and task notes. If th
     fi
 fi
 
-exec taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
+exec $INFRA/taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
 TEMPLATE
 chmod +x "$TASKDIR/_claude.do"
 echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --permission-mode $perm_mode)"
@@ -204,7 +204,7 @@ ENDPROMPT
 setsid bash -c '
     cd "$4"
     tmp=$(mktemp)
-    if claude --print --model sonnet --effort low --add-dir "$4" -- "$(cat "$1")" > "$tmp" 2>/dev/null; then
+    if $CLAUDE_BIN --print --model sonnet --effort low --add-dir "$4" -- "$(cat "$1")" > "$tmp" 2>/dev/null; then
         mv "$tmp" "$2"
         # Create signal file only if criteria passed and user requested it
         if [ "$3" = "1" ] && ! grep -q "^NEEDS_CLARIFICATION:" "$2"; then

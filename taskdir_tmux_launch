@@ -9,10 +9,16 @@ taskdir="${1:?Usage: taskdir_tmux_launch <taskdir_path> <claude_args...>}"
 taskdir=$(cd "$taskdir" && pwd)
 shift
 
+# Resolve $CLAUDE_BIN (plain `claude` vs the genie wrapper) via the shared
+# resolver. Panes run in a NON-interactive shell where the `claude` alias
+# (claude='genie ...') is NOT expanded, so bash_utils reads .infra/machine.local.
+INFRA="$(cd "$(dirname "$0")" && pwd)"
+source "$INFRA/bash_utils"
+
 # If already inside a managed tmux pane, run claude directly
 if [ -n "$CLAUDE_TMUX_MANAGED" ]; then
     cd "$taskdir"
-    exec claude "$@"
+    exec $CLAUDE_BIN "$@"
 fi
 
 # --- Derive pane name from ::*.hmm ---
@@ -45,7 +51,7 @@ for arg in "$@"; do
     escaped_args="$escaped_args '$(echo "$arg" | sed "s/'/'\\\\''/g")'"
 done
 
-cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1 && exec claude $escaped_args"
+cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1 && exec $CLAUDE_BIN $escaped_args"
 
 # Create new pane in the running column
 dash_add_task running "$pane_name" "$cmd"

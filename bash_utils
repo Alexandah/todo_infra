@@ -33,6 +33,15 @@ crash_if_nonzero_exit() {
 	return 0
 }
 
+# Resolve the Claude command for non-interactive use (scripts, tmux panes,
+# `bash -c` children) where the `claude` alias (e.g. claude='genie ...') is
+# NOT expanded. A gitignored machine.local beside this file sets CLAUDE_BIN
+# explicitly (e.g. genie on AMD machines). Exported so children inherit it.
+__bu_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[ -f "$__bu_dir/machine.local" ] && source "$__bu_dir/machine.local"
+export CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+unset __bu_dir
+
 exit_if_dir_outside_of_todo_system() {
 	local taskdir_path=$(realpath "$1")
 	local taskdir_name=$(basename "$taskdir_path")

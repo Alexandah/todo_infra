@@ -3,6 +3,22 @@
 # Acceptance criteria below as # === Criterion N: ... === section comments.
 set -uo pipefail
 
+# Resolve $CLAUDE_BIN via the todo-system shared resolver (bash_utils), found
+# by walking up to .infra. validate.do runs non-interactively, where the
+# `claude` alias (claude='genie ...') is NOT expanded; bash_utils reads
+# .infra/machine.local. Falls back to plain `claude` if .infra isn't found.
+# The upward search is BOUNDED — depth-capped and stops at $HOME — so a stray
+# or malicious .infra higher in the filesystem can't be picked up.
+__d="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+__n=0
+while [ "$__n" -lt 6 ]; do
+    [ -f "$__d/.infra/bash_utils" ] && { source "$__d/.infra/bash_utils"; break; }
+    { [ "$__d" = "/" ] || [ "$__d" = "${HOME:-/}" ]; } && break
+    __d="$(dirname "$__d")"; __n=$((__n + 1))
+done
+CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+unset __d __n
+
 PASS=0; FAIL=0; results=()
 
 check() {  # deterministic; args: <name> <cmd...>
@@ -24,15 +40,15 @@ claude_verify() {  # judgment; args: <name> <criterion>
     local prompt="You are a strict verifier. Emit a JSON object matching the provided schema. verdict ∈ {PASS,FAIL}. reason: one short sentence.
 
 Criterion: ${criterion}"
-    if ! command -v claude >/dev/null; then
-        results+=("[FAIL] $name — claude not in PATH"); ((FAIL++)); return
+    if ! command -v "$CLAUDE_BIN" >/dev/null; then
+        results+=("[FAIL] $name — $CLAUDE_BIN not in PATH"); ((FAIL++)); return
     fi
-    out=$(claude -p --bare --no-session-persistence \
-        --model claude-haiku-4-5-20251001 \
+    out=$("$CLAUDE_BIN" -p --bare --no-session-persistence \
+        --model haiku \
         --output-format json \
         --json-schema "$VERIFIER_SCHEMA" \
         "$prompt" 2>/dev/null) || {
-        results+=("[FAIL] $name — claude invocation failed"); ((FAIL++)); return
+        results+=("[FAIL] $name — $CLAUDE_BIN invocation failed"); ((FAIL++)); return
     }
 
     # CLI enforces schema, but defend against missing field anyway.
