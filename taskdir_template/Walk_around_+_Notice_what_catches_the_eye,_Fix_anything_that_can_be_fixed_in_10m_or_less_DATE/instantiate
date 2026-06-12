@@ -1,0 +1,32 @@
+#!/bin/bash
+THIS_FILE=$(realpath $(which "$0"))
+THIS_DIR=$(dirname "$THIS_FILE")
+
+TODAY=$(date '+%D' | tr '/' '-')
+declare -A findnreplace=(
+	[DATE]="$TODAY"
+)
+
+#Find-n-Replace in regular file contents + names
+find "$THIS_DIR" -type f -not -path "$THIS_FILE" -print0 | while IFS= read -r -d '' file; do
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		sed -i "s/$to_replace/$replacement/g" "$file"
+	done
+	revised_filename=$(basename "$file")
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		revised_filename=$(echo "$revised_filename" | sed "s/$to_replace/$replacement/g")
+	done
+	mv "$file" "$(dirname "$file")/$revised_filename"
+done
+
+#Find-n-Replace in dir names
+find "$THIS_DIR" -depth -type d -print0 | while IFS= read -r -d '' dir_path; do
+	revised_dir_name=$(basename "$dir_path")
+	for to_replace in "${!findnreplace[@]}"; do
+		replacement="${findnreplace[$to_replace]}"
+		revised_dir_name=$(echo "$revised_dir_name" | sed "s/$to_replace/$replacement/g")
+	done
+	mv "$dir_path" "$(dirname "$dir_path")/$revised_dir_name"
+done
