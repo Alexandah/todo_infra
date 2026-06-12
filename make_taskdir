@@ -70,6 +70,8 @@ cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/.log.do
 chmod +x $taskdir/.log.do
 cat "$HERE"/log_time | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/log_time.do
 chmod +x $taskdir/log_time.do
+cat "$HERE"/start_work_sess.do | sed "s:bash_utils:$(realpath "$HERE/bash_utils"):g" > $taskdir/start_work_sess.do
+chmod +x $taskdir/start_work_sess.do
 cp "$HERE"/configure_automation $taskdir/_configure_automation.do
 chmod +x $taskdir/_configure_automation.do
 
