@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 import os
 import subprocess
+import sys
 import time
 from pathlib import Path
+
+
+def _no_traceback_on_interrupt(exctype, value, tb):
+    if exctype is KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+    else:
+        sys.__excepthook__(exctype, value, tb)
+
+sys.excepthook = _no_traceback_on_interrupt
 
 HERE = Path(__file__).resolve().parent
 TODO_ROOT = HERE.parent
@@ -32,30 +42,30 @@ def indent(text, spaces=4):
 # 0. Preliminary Logistics
 print("0. Preliminary Logistics")
 print("i. Walk around the house & Identify what draws your attention. Fix what can be fixed in <=10m ; otherwise, Gather thoughts & things for further processing.")
-time.sleep(2)
+time.sleep(3)
 input("\tPress ENTER when done.")
 
 print("ii. Translate any left-over iPhone todo reminders, recurring thoughts, unread messages, hand-written notes, etc, into inputs for todo system.")
-time.sleep(2)
+time.sleep(3)
 run_lf("Press T to create a taskdir for any left-over iPhone todos, recurring thoughts, unread messages, hand-written notes, etc.", Path.home() / "main/todo")
 
 print("iii. Update the timestamp for any people under ../relationships/* interacted with this week.")
-time.sleep(2)
+time.sleep(3)
 run_lf("Press t to mark anyone you interacted with this week.", Path.home() / "main/relationship", "set sortby time;set info time;set reverse")
 
 print("iv. Schedule a meet-up with someone from your relationship view.")
-time.sleep(2)
+time.sleep(3)
 subprocess.run([str(HERE / "schedule_meetup_from_relationship")])
 
 print("v. Mark tasks under ../todo/wait/* as no longer waiting if applicable.")
-time.sleep(2)
+time.sleep(3)
 run_lf("Press x to mark tasks as no longer waiting if applicable & Write follow-up documentation.", Path.home() / "main/todo/wait")
 print()
 
 # 1. Post-Mortem of Goals
 print("1. Post-Mortem of Goals")
 print("i. Review time estimations for the past week.")
-time.sleep(2)
+time.sleep(3)
 print("Incomplete tasks:")
 time.sleep(1)
 
@@ -100,7 +110,7 @@ postmortem_of_tracked_habits = input("    2 SENTENCES> ")
 print(postmortem_of_tracked_habits)
 
 print("ii. Review list of all habits. Identify those having difficulty with compliance.")
-time.sleep(2)
+time.sleep(3)
 habits_needing_attention = run_lf_select(
     "Mark habits struggling with compliance, Press Enter to confirm selection.",
     Path.home() / "main/habit"
@@ -124,14 +134,14 @@ print("i. Recall for 3m: How well did I adhere to my agreements this week?")
 subprocess.run(["timer", "-m", "3"])
 
 print("ii. Read aloud from the Constitution's articles: ONLY the numbered lines")
-time.sleep(2)
+time.sleep(3)
 constitution = Path.home() / "main/agreements/A1:Constitution_for_the_Sovereignty_of_Alexander"
 with open(constitution) as f:
     numbered_lines = [line for line in f if line.strip() and line.lstrip()[0].isdigit() and "." in line.split()[0]]
 subprocess.run(["less"], input="".join(numbered_lines), text=True)
 
 print("iii. Skim the rest of my agreements, relating them to my recent efforts.")
-time.sleep(2)
+time.sleep(3)
 agreements_for_further_focus = run_lf_select(
     "Skim your agreements, considering how they relate to my efforts. Mark any A3s to review for upgrade/revision, or any others for further focus, Press ENTER to confirm selection.",
     Path.home() / "main/agreements"
@@ -191,7 +201,7 @@ print()
 # 5. Review of Domains
 print("5. Review of Domains")
 print("i. Skim the domains-of-concern, identify those relevant to planning for this week.")
-time.sleep(2)
+time.sleep(3)
 relevant_domains_of_concern = run_lf_select(
     "Mark domains relevant to planning for this week, Press Enter to confirm selection.",
     TODO_ROOT / "#domain"

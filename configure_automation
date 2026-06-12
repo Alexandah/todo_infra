@@ -1,7 +1,9 @@
 #!/bin/bash
 # configure_automation — Interactive Claude taskdir configuration wizard
-# Walks the user through model/effort/mode choices, always generates acceptance
-# criteria, then produces a configured _claude.do and self-deletes.
+# Walks the user through model/effort/mode choices, produces a configured
+# _claude.do (which hints Claude to derive acceptance criteria via the
+# define-acceptance-and-validation-criteria skill on task start), then
+# self-deletes.
 set -e
 
 TASKDIR=$(dirname $(realpath "$0"))
@@ -65,35 +67,36 @@ else
 fi
 
 # ── settings.local.json ───────────────────────────────────────────────────────
-crash_if_nonzero_exit \
-    'printf "no — skip\nyes — configure settings.local.json" | fzf \
-        --prompt="SETTINGS.LOCAL.JSON > " \
-        --header="Configure per-taskdir Claude Code settings (allowed tools, etc.)" '"$fzf_gap_arg"
-settings_choice="$STDOUT"
-
-if [[ "$settings_choice" == yes* ]]; then
-    echo ""
-    echo "--- Launching Claude to configure settings.local.json ---"
-    echo "(Exit the Claude session when done; the wizard will resume.)"
-    echo ""
-    (
-        cd /tmp
-        mkdir -p "$TASKDIR/.claude"
-        $CLAUDE_BIN --permission-mode auto \
-		--add-dir "$TASKDIR" \
-		-- \
-"You are helping configure .claude/settings.local.json for a Claude Code taskdir session.
-
-Common settings to offer:
-- allowedTools: pre-approve specific Bash commands or tool patterns so Claude doesn't prompt for them (e.g., allow 'Bash(git:*)' or 'Bash(npm:*)')
-- Allowing writes or reads outside the taskdir
-
-Make suggestions based on the task for what to configure and ask me what I think, then write (or update) the file .claude/settings.local.json accordingly. When done, say 'Done — settings.local.json configured.' and stop."
-    )
-    echo ""
-    echo "--- Returned to configuration wizard ---"
-    echo ""
-fi
+# 05-27-26		I have never used this, commenting out for now
+#crash_if_nonzero_exit \
+#    'printf "no — skip\nyes — configure settings.local.json" | fzf \
+#        --prompt="SETTINGS.LOCAL.JSON > " \
+#        --header="Configure per-taskdir Claude Code settings (allowed tools, etc.)" '"$fzf_gap_arg"
+#settings_choice="$STDOUT"
+#
+#if [[ "$settings_choice" == yes* ]]; then
+#    echo ""
+#    echo "--- Launching Claude to configure settings.local.json ---"
+#    echo "(Exit the Claude session when done; the wizard will resume.)"
+#    echo ""
+#    (
+#        cd /tmp
+#        mkdir -p "$TASKDIR/.claude"
+#        $CLAUDE_BIN --permission-mode auto \
+#		--add-dir "$TASKDIR" \
+#		-- \
+#"You are helping configure .claude/settings.local.json for a Claude Code taskdir session.
+#
+#Common settings to offer:
+#- allowedTools: pre-approve specific Bash commands or tool patterns so Claude doesn't prompt for them (e.g., allow 'Bash(git:*)' or 'Bash(npm:*)')
+#- Allowing writes or reads outside the taskdir
+#
+#Make suggestions based on the task for what to configure and ask me what I think, then write (or update) the file .claude/settings.local.json accordingly. When done, say 'Done — settings.local.json configured.' and stop."
+#    )
+#    echo ""
+#    echo "--- Returned to configuration wizard ---"
+#    echo ""
+#fi
 
 # ── Generate configured _claude.do ───────────────────────────────────────────
 echo "=== Configuration Summary ==="
@@ -140,23 +143,10 @@ Task notes:
     fi
 fi
 
-if [ -f "ACCEPTANCE_CRITERIA" ]; then
-    ac_content=\$(cat ACCEPTANCE_CRITERIA)
-    if echo "\$ac_content" | grep -q "^NEEDS_CLARIFICATION:"; then
-        msg="\$msg
+if [ ! -f "validate.do" ] || ! grep -q "^# === Criterion" validate.do 2>/dev/null; then
+    msg="\$msg
 
-ACCEPTANCE CRITERIA (auto-generator flagged for clarification):
-\$ac_content
-
-Before implementation: try to resolve the clarification yourself using the goal, task notes, and repo context. If you can plausibly infer the missing detail, write 1-5 concrete, verifiable criteria back to ACCEPTANCE_CRITERIA and proceed. Ask the User only if the gap is genuinely irresolvable from context. Do not begin implementation until ACCEPTANCE_CRITERIA contains concrete criteria (replacing the NEEDS_CLARIFICATION line)."
-    else
-        msg="\$msg
-
-ACCEPTANCE CRITERIA:
-\$ac_content
-
-Before implementation: sanity-check these against the goal and task notes. If they look off (don't match the goal, miss the point, or describe work already done), refine them yourself when you can; ask the User only if you genuinely can't tell what the right criteria are. Overwrite ACCEPTANCE_CRITERIA with the refined version before proceeding."
-    fi
+No validate.do (or no criteria sections) yet. Before starting implementation, invoke the define-acceptance-and-validation-criteria skill to derive 1–5 acceptance criteria for this task and write them into a fresh validate.do scaffold. Then proceed; the validate-task skill takes over at end of work."
 fi
 
 exec $INFRA/taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
@@ -168,56 +158,18 @@ echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --per
 crash_if_nonzero_exit \
     'printf "no\nyes — mark as ready for auto-pickup" | fzf \
         --prompt="SIGNAL FILE > " \
-        --header="Creates ;claude_plz_do_this (chmod +x) after acceptance criteria pass" '"$fzf_gap_arg"
+        --header="Creates ;claude_plz_do_this (chmod +x) immediately after configuration completes" '"$fzf_gap_arg"
 signal_choice="$STDOUT"
 
-# Record choice — signal file is created by the background process after criteria pass
-want_signal=0
 if [[ "$signal_choice" == yes* ]]; then
-    want_signal=1
-    echo "Signal file will be created after acceptance criteria pass"
+    touch "$TASKDIR/;claude_plz_do_this"
+    chmod +x "$TASKDIR/;claude_plz_do_this"
+    echo "Signal file created → ;claude_plz_do_this"
 fi
 
 echo ""
 echo "Configuration complete. Run ./_claude.do to launch Claude for this task."
 echo ""
-
-# ── Acceptance criteria (fully detached via setsid — no terminal interference) ─
-# If user requested signal file, it is created here AFTER criteria generate
-# successfully and do NOT contain NEEDS_CLARIFICATION.
-ac_goal_filename=$(basename "$goal_file")
-ac_prompt_file=$(mktemp)
-cat > "$ac_prompt_file" << ENDPROMPT
-You are generating acceptance criteria for a task. The task directory is your working directory.
-
-Read the task file '$ac_goal_filename' to understand the goal and any notes.
-
-Write a list of 1-5 verifiable acceptance criteria. Each must be concrete and testable (objectively verifiable as done or not done).
-Err on the side of less rather than more criteria-- drill down to the essential core of the task.
-
-If the task description lacks sufficient detail to produce meaningful criteria, output only this line:
-NEEDS_CLARIFICATION: <explanation of what additional details are needed>
-
-Output only the criteria list or the NEEDS_CLARIFICATION line — no headings, no other text.
-ENDPROMPT
-
-setsid bash -c '
-    cd "$4"
-    tmp=$(mktemp)
-    if $CLAUDE_BIN --print --model sonnet --effort low --add-dir "$4" -- "$(cat "$1")" > "$tmp" 2>/dev/null; then
-        mv "$tmp" "$2"
-        # Create signal file only if criteria passed and user requested it
-        if [ "$3" = "1" ] && ! grep -q "^NEEDS_CLARIFICATION:" "$2"; then
-            touch "$4/;claude_plz_do_this"
-            chmod +x "$4/;claude_plz_do_this"
-        fi
-    else
-        rm -f "$tmp"
-    fi
-    rm -f "$1"
-' _ "$ac_prompt_file" "$TASKDIR/ACCEPTANCE_CRITERIA" "$want_signal" "$TASKDIR" \
-    < /dev/null > /dev/null 2>&1 &
-echo "Acceptance criteria generating in background → ACCEPTANCE_CRITERIA"
 
 # ── Self-delete ───────────────────────────────────────────────────────────────
 rm "$0"
