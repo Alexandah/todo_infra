@@ -22,6 +22,15 @@ goal=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ')
 time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
 deadline=$(basename "$TASKDIR"/:by_* 2>/dev/null | sed 's/^:by_//' | tr '_' ' ')
 
+# ── Force task spec if .hmm is empty ──────────────────────────────────────────
+# configure_automation self-deletes after one run, so an empty goal file would
+# leave the task permanently unspecified. Force the user to spec it now: open the
+# .hmm in hmm and re-open until it is non-empty (ctrl+c to abort the wizard).
+while [ -n "$goal_file" ] && [ ! -s "$goal_file" ]; do
+    echo "Goal file is empty — opening in hmm. Add a node and save (ctrl+s) to spec the task."
+    hmm "$goal_file"
+done
+
 echo ""
 echo "=== Claude Taskdir Configuration ==="
 echo "  Task: $goal"
