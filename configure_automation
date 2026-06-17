@@ -22,14 +22,25 @@ goal=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ')
 time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
 deadline=$(basename "$TASKDIR"/:by_* 2>/dev/null | sed 's/^:by_//' | tr '_' ' ')
 
-# ── Force task spec if .hmm is empty ──────────────────────────────────────────
-# configure_automation self-deletes after one run, so an empty goal file would
-# leave the task permanently unspecified. Force the user to spec it now: open the
-# .hmm in hmm and re-open until it is non-empty (ctrl+c to abort the wizard).
+# ── QA-gate the task spec ──────────────────────────────────────
+echo "[Prompt QA]"
+# Force task spec if .hmm is empty
 while [ -n "$goal_file" ] && [ ! -s "$goal_file" ]; do
-    echo "Goal file is empty — opening in hmm. Add a node and save (ctrl+s) to spec the task."
+    echo "Goal file is empty — opening in hmm. Add some details and save to spec the task."
+    sleep 2
     hmm "$goal_file"
 done
+# configure_automation self-deletes after one run, so this is the moment to enforce a usable spec.
+# prompt_gate loops the user through hmm until the spec passes
+# prompt_qa_policy.md — it never autocorrects (the human sharpens the goal).
+# Ctrl-C aborts the wizard; prompt_gate's trap leaves the .hmm clean.
+if [ -n "$goal_file" ]; then
+    PROMPT_QA_POLICY="$INFRA/prompt_qa_policy.md" "$INFRA/prompt_gate" --file "$goal_file" --editor hmm
+else
+    echo "[Prompt QA] ERROR -- No <goal>.hmm file found!"
+    sleep 2
+    exit 1
+fi
 
 echo ""
 echo "=== Claude Taskdir Configuration ==="
@@ -164,17 +175,17 @@ chmod +x "$TASKDIR/_claude.do"
 echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --permission-mode $perm_mode)"
 
 # ── Signal file ───────────────────────────────────────────────────────────────
-crash_if_nonzero_exit \
-    'printf "no\nyes — mark as ready for auto-pickup" | fzf \
-        --prompt="SIGNAL FILE > " \
-        --header="Creates ;claude_plz_do_this (chmod +x) immediately after configuration completes" '"$fzf_gap_arg"
-signal_choice="$STDOUT"
-
-if [[ "$signal_choice" == yes* ]]; then
-    touch "$TASKDIR/;claude_plz_do_this"
-    chmod +x "$TASKDIR/;claude_plz_do_this"
-    echo "Signal file created → ;claude_plz_do_this"
-fi
+#crash_if_nonzero_exit \
+#    'printf "no\nyes — mark as ready for auto-pickup" | fzf \
+#        --prompt="SIGNAL FILE > " \
+#        --header="Creates ;claude_plz_do_this (chmod +x) immediately after configuration completes" '"$fzf_gap_arg"
+#signal_choice="$STDOUT"
+#
+#if [[ "$signal_choice" == yes* ]]; then
+#    touch "$TASKDIR/;claude_plz_do_this"
+#    chmod +x "$TASKDIR/;claude_plz_do_this"
+#    echo "Signal file created → ;claude_plz_do_this"
+#fi
 
 echo ""
 echo "Configuration complete. Run ./_claude.do to launch Claude for this task."

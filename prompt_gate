@@ -1,0 +1,241 @@
+#!/usr/bin/env bash
+# prompt_gate — Prompt QA enforcer.
+#
+# A headless Claude referee that checks a prompt/spec against prompt_qa_policy.md
+# and returns PASS or FAIL + one sentence. It NEVER rewrites the text: the point
+# is to force the human to sharpen the goal themselves (cybernetic feedback).
+#
+# Modes:
+#   prompt_gate "draft"        single-shot (arg):  PASS prints verbatim, else exit 2
+#   echo draft | prompt_gate   single-shot (pipe): same
+#   prompt_gate                interactive: edit in $EDITOR (temp file) until PASS
+#   prompt_gate --file PATH [--editor CMD]
+#                              in-place: judge PATH; only opens the editor on FAIL,
+#                              injecting the critique as a #QA# node and looping
+#                              until PASS. Used to gate taskdir .hmm specs via hmm.
+#
+# stdout discipline: ONLY the approved text is written to stdout; all UI/verdicts
+# go to stderr, so the single-shot/temp modes compose in a pipeline.
+#
+# #QA# convention: any line whose first non-space token is `#QA#` is treated as a
+# transient critique annotation and stripped before judging / on exit. Real
+# content must not start with `#QA#`.
+set -uo pipefail
+
+# --- resolve CLAUDE_BIN (genie on this machine) via the .infra walk ----------
+__d="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+SCRIPT_DIR="$__d"
+__n=0
+while [ "$__n" -lt 8 ]; do
+    [ -f "$__d/.infra/bash_utils" ] && { source "$__d/.infra/bash_utils"; break; }
+    { [ "$__d" = "/" ] || [ "$__d" = "${HOME:-/}" ]; } && break
+    __d="$(dirname "$__d")"; __n=$((__n + 1))
+done
+CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+unset __d __n
+
+POLICY_FILE="${PROMPT_QA_POLICY:-$SCRIPT_DIR/prompt_qa_policy.md}"
+MODEL="${GATE_MODEL:-haiku}"   # haiku ~2x faster than sonnet; override via GATE_MODEL
+VERDICT_SCHEMA='{"type":"object","properties":{"verdict":{"type":"string","enum":["PASS","FAIL"]},"reason":{"type":"string"}},"required":["verdict","reason"]}'
+QA_RE='^[[:space:]]*#QA#'
+
+# Assemble CLAUDE.md memory (user-level + project hierarchy from the context dir
+# up to $HOME) so the judge can run with --bare — skipping the multi-second
+# LSP/plugin/hook startup — yet still match a real session's background. The
+# context dir is GATE_CTX_DIR (set to the gated file's dir in --file mode) or
+# $PWD. Memoized in MD_CTX. (Measured ~5s vs ~12s for non-bare auto-discovery.)
+MD_CTX=""; MD_CTX_READY=""
+assemble_md_ctx() {
+    [ -n "$MD_CTX_READY" ] && return
+    MD_CTX_READY=1
+    local d f
+    for f in "$HOME/.claude/CLAUDE.md" "$HOME/.claude/CLAUDE.local.md"; do
+        [ -f "$f" ] && MD_CTX+="===== $f =====
+$(cat "$f")
+
+"
+    done
+    d="${GATE_CTX_DIR:-$PWD}"
+    while :; do
+        for f in "$d/CLAUDE.md" "$d/CLAUDE.local.md"; do
+            [ -f "$f" ] && MD_CTX+="===== $f =====
+$(cat "$f")
+
+"
+        done
+        { [ "$d" = "$HOME" ] || [ "$d" = "/" ] || [ -z "$d" ]; } && break
+        d="$(dirname "$d")"
+    done
+}
+
+err() { printf '%s\n' "$*" >&2; }
+die() { err "prompt_gate: $*"; exit 1; }
+
+command -v "$CLAUDE_BIN" >/dev/null 2>&1 || die "$CLAUDE_BIN not in PATH"
+command -v jq >/dev/null 2>&1 || die "jq not in PATH"
+[ -f "$POLICY_FILE" ] || die "policy file not found: $POLICY_FILE"
+
+# evaluate <text> -> echoes "<VERDICT>\t<reason>"; nonzero on invocation error.
+evaluate() {
+    local user_prompt="$1" policy out verdict reason
+    err "Evaluating prompt against policy…"
+    policy="$(cat "$POLICY_FILE")"
+    local claude_runtime_limiting_args="--effort ${GATE_EFFORT:-low} --max-budget-usd 0.3 --max-turns 10"
+    local judge_prompt="You are a strict prompt-QA referee. Judge the prompt below against the policy. This is a fast intuitive gut-check, NOT a legal brief — follow the policy's spirit, decide quickly, do not overthink or deliberate at length. We must keep the machine-to-user feedback loop tight, so don't keep them waiting. Here are the args enforcing runtime restrictions passed into this Claude Code call: $claude_runtime_limiting_args 
+    Emit a JSON object matching the provided schema: verdict in {PASS,FAIL}; reason is ONE plain sentence. On FAIL, name the single biggest gap per the policy's verdict rules. Never rewrite or correct the prompt.
+
+===== POLICY =====
+${policy}
+
+===== PROMPT UNDER REVIEW =====
+${user_prompt}
+===== END PROMPT ====="
+
+    assemble_md_ctx
+    out=$("$CLAUDE_BIN" -p --bare --no-session-persistence \
+        --model "$MODEL" \
+        $claude_runtime_limiting_args \
+        --output-format json \
+        --json-schema "$VERDICT_SCHEMA" \
+        --append-system-prompt "$MD_CTX" \
+        "$judge_prompt" 2>/dev/null) || return 1
+
+    jq -e '.structured_output | type=="object"' <<<"$out" >/dev/null 2>&1 || return 1
+    verdict=$(jq -r '.structured_output.verdict // empty' <<<"$out")
+    reason=$(jq -r '.structured_output.reason // empty' <<<"$out")
+    [ "$verdict" = "PASS" ] || [ "$verdict" = "FAIL" ] || return 1
+    [ -n "$reason" ] || return 1
+    printf '%s\t%s\n' "$verdict" "$reason"
+}
+
+# judge_once <text>: PASS -> print verbatim to stdout, exit 0; FAIL -> exit 2.
+judge_once() {
+    local prompt="$1" res verdict reason
+    [ -n "${prompt//[[:space:]]/}" ] || die "empty prompt"
+    res="$(evaluate "$prompt")" || die "judge invocation failed"
+    verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+    if [ "$verdict" = "PASS" ]; then
+        err "PASS"; printf '%s' "$prompt"; exit 0
+    fi
+    err "FAIL: $reason"; exit 2
+}
+
+# strip_qa <file>: remove #QA# annotation lines in place.
+strip_qa() {
+    local f="$1" t
+    t="$(mktemp)" || return 1
+    grep -vE "$QA_RE" "$f" > "$t" 2>/dev/null
+    mv "$t" "$f"
+}
+
+# inject_qa <file> <reason>: add the critique as a child node just after the
+# root line (line 1), so it is visible in the editor while revising.
+inject_qa() {
+    local f="$1" reason="${2//$'\n'/ }" t
+    t="$(mktemp)" || return 1
+    {
+        head -n 1 "$f"
+        printf '\t#QA# FAIL: %s\n' "$reason"
+        tail -n +2 "$f"
+    } > "$t"
+    mv "$t" "$f"
+}
+
+# gate_file <file> <editor>: judge-first in-place loop. Only opens the editor on
+# FAIL. Leaves the file free of #QA# lines on any exit (trap). No bypass.
+gate_file() {
+    local file="$1" editor="$2" spec res verdict reason
+    [ -f "$file" ] || die "file not found: $file"
+    GATE_CTX_DIR="$(cd "$(dirname "$file")" && pwd)"   # CLAUDE.md hierarchy root
+    trap 'strip_qa "$file" 2>/dev/null' EXIT
+    while :; do
+        strip_qa "$file"
+        spec="$(cat "$file")"
+        if [ -z "${spec//[[:space:]]/}" ]; then
+            reason="Spec is empty — state the goal with enough context, action, and desired result to act on."
+        else
+            res="$(evaluate "$spec")" || die "judge invocation failed"
+            verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+            if [ "$verdict" = "PASS" ]; then
+                err "PASS"; trap - EXIT; strip_qa "$file"; exit 0
+            fi
+        fi
+        err "FAIL: $reason"
+        inject_qa "$file" "$reason"
+        "$editor" "$file" </dev/tty >/dev/tty 2>/dev/tty || die "editor exited nonzero"
+        strip_qa "$file"
+    done
+}
+
+# ---- dispatch ---------------------------------------------------------------
+FILE=""; EDITOR_CMD=""; pos=()
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --file)   FILE="${2:?--file needs a path}"; shift 2;;
+        --editor) EDITOR_CMD="${2:?--editor needs a command}"; shift 2;;
+        --)       shift; while [ "$#" -gt 0 ]; do pos+=("$1"); shift; done;;
+        *)        pos+=("$1"); shift;;
+    esac
+done
+
+# In-place file mode (gate a real file, e.g. a taskdir .hmm via hmm).
+if [ -n "$FILE" ]; then
+    gate_file "$FILE" "${EDITOR_CMD:-${EDITOR:-vi}}"
+fi
+
+set -- ${pos[@]+"${pos[@]}"}
+
+# Single-shot: prompt as args.
+if [ "$#" -gt 0 ]; then
+    judge_once "$*"
+fi
+
+# Single-shot: prompt piped on stdin (stdin not a tty).
+if [ ! -t 0 ]; then
+    judge_once "$(cat)"
+fi
+
+# Interactive loop: edit in $EDITOR (temp file) until PASS. No bypass.
+# The verdict is written INTO the buffer as `#QA#` lines so the critique stays
+# on screen while editing; those lines are stripped on submit.
+EDITOR="${EDITOR:-vi}"
+tmp="$(mktemp "${TMPDIR:-/tmp}/prompt_gate.XXXXXX")" || die "mktemp failed"
+trap 'rm -f "$tmp"' EXIT
+SEP='#QA# ──────────────────────────────────────────────'
+
+seed_buffer() {
+    local reason="${1//$'\n'/ }" prior="$2"
+    {
+        printf '%s\n' "$SEP"
+        if [ -n "$reason" ]; then
+            printf '#QA# FAIL: %s\n' "$reason"
+            printf '#QA# Revise the prompt below to address this, then save & quit.\n'
+        else
+            printf '#QA# Write your prompt below, then save & quit to submit.\n'
+            printf '#QA# Policy: %s\n' "$POLICY_FILE"
+        fi
+        printf '#QA# (these #QA# lines are stripped automatically; empty prompt aborts)\n'
+        printf '%s\n' "$SEP"
+        printf '%s' "$prior"
+    } > "$tmp"
+}
+
+prompt=""; reason=""
+seed_buffer "" ""
+while :; do
+    "$EDITOR" "$tmp" >/dev/tty 2>/dev/tty </dev/tty || die "editor exited nonzero"
+    prompt="$(grep -vE "$QA_RE" "$tmp" || true)"
+    if [ -z "${prompt//[[:space:]]/}" ]; then
+        err "aborted (empty prompt)"; exit 1
+    fi
+    if ! res="$(evaluate "$prompt")"; then
+        err "judge invocation failed; reopening editor"
+        seed_buffer "judge invocation failed — try resubmitting" "$prompt"; continue
+    fi
+    verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+    if [ "$verdict" = "PASS" ]; then
+        err "PASS"; printf '%s' "$prompt"; sleep 2; exit 0
+    fi
+    err "FAIL: $reason"
+    seed_buffer "$reason" "$prompt"
+done
