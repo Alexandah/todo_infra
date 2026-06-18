@@ -80,7 +80,7 @@ evaluate() {
     local user_prompt="$1" policy out verdict reason
     err "Evaluating prompt against policy…"
     policy="$(cat "$POLICY_FILE")"
-    local claude_runtime_limiting_args="--effort ${GATE_EFFORT:-low} --max-budget-usd 0.3 --max-turns 10"
+    local claude_runtime_limiting_args="--effort ${GATE_EFFORT:-low} --max-budget-usd 0.4 --max-turns 13"
     local judge_prompt="You are a strict prompt-QA referee. Judge the prompt below against the policy. This is a fast intuitive gut-check, NOT a legal brief — follow the policy's spirit, decide quickly, do not overthink or deliberate at length. We must keep the machine-to-user feedback loop tight, so don't keep them waiting. Here are the args enforcing runtime restrictions passed into this Claude Code call: $claude_runtime_limiting_args 
     Emit a JSON object matching the provided schema: verdict in {PASS,FAIL}; reason is ONE plain sentence. On FAIL, name the single biggest gap per the policy's verdict rules. Never rewrite or correct the prompt.
 
