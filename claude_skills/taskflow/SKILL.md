@@ -1,6 +1,6 @@
 ---
 name: taskflow
-description: Interactive orchestrator for taking a taskdir from start to done with the precision of code. Run at task start (the launcher hints it, or type /taskflow). Sequences six gated phases — Explore, Criteria, Plan, Implement, Validate, Finalize — delegating token-heavy no-input work to isolated subagents (taskflow-explorer / taskflow-implementer / taskflow-validator) while the main Opus session owns every interactive decision gate. Re-enterable for follow-on increments.
+description: Interactive orchestrator for taking a taskdir from start to done with the precision of code. Run at task start (the launcher hints it, or type /taskflow). Sequences six gated phases — Explore, Define Criteria, Plan, Implement, Validate, Finalize — delegating token-heavy no-input work to isolated subagents (taskflow-explorer / taskflow-implementer / taskflow-validator) while the main Opus session owns every interactive decision gate. Re-enterable for follow-on increments.
 ---
 
 # taskflow — the taskdir conductor
@@ -31,7 +31,7 @@ task size justifies it; most taskdirs here are small.
 
 ## The six phases
 
-### 1. Explore / Reflect — subagent: `taskflow-explorer` [haiku, read-only]
+### 1. Explore — subagent: `taskflow-explorer` [haiku, read-only]
 Dispatch `taskflow-explorer` (Task tool, `subagent_type: taskflow-explorer`).
 It reads the goal note + taskdir + relevant filesystem context + any relevant web searches
 and returns a `<=40`-line digest (relevant files, inferred intent, constraints,
@@ -39,7 +39,7 @@ risks, open questions). Merge it; post a 3-bullet read to the user.
 - **GATE A** (light, skippable for trivial): "Is this the right framing/scope?"
   Catches a wrong-problem before any effort is spent planning.
 
-### 2. Define Criteria of Goal — NORTH STAR (before Plan) — skill: `define-acceptance-and-validation-criteria`
+### 2. Define Criteria — NORTH STAR (before Plan) — skill: `define-acceptance-and-validation-criteria`
 The most important gate: define what the task IS and what "done" means **before
 planning**. Everything downstream is built on this north star, so get it right.
 - Invoke the `define-acceptance-and-validation-criteria` skill. It derives 1–5

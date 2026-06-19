@@ -12,7 +12,7 @@ partner. Read the goal, explore the taskdir, and calibrate.
 
 ## Task Flow
 
-The taskdir lifecycle is codified as the `taskflow` skill: Explore → Criteria
+The taskdir lifecycle is codified as the `taskflow` skill: Explore → Define Criteria
 (north-star, before Plan) → Plan → Implement (subagent per feature) → Validate
 (fresh-context subagent) → Finalize. The launcher hints it at task start;
 invoke it (or type `/taskflow`). Trivial taskdirs collapse to an inline path.
