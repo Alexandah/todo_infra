@@ -29,6 +29,8 @@ Background the agent needs: the situation, relevant files/resources/locations,
 and the role the agent should play (who it is, who the audience is). A prompt
 that names a task with no anchoring context (what system, what files, what
 goal it serves) fails here.
+**IMPORTANT**: Be sure to count any context that is pulled in from CLAUDE.md's or other standard Claude Code start-up prompt appendings.
+               Don't FAIL them for context that is already explained-- it was put into CLAUDE.md to save them from manually writing it every time!
 
 ### 2. Action — required
 A clear statement of what to do: the task, the process or actions to take, and
