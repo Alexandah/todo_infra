@@ -1,0 +1,62 @@
+#!/bin/bash
+set -e
+
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+
+todo_root=$(dirname $(dirname $(realpath $(which "$0"))))
+
+for item in `find $todo_root/new -maxdepth 1 -type f`; do
+	item_name=$(basename $item)
+	echo "--- $item_name ---"
+	if [ -s "$item" ] ; then
+		cat $item
+		echo "--- $item_name ---"
+	fi
+
+	yeet_it=''
+	read -e -n 1 -p 'Should we just delete & forget about this? (y/n): ' yeet_it
+	echo
+	if [ 'y' = "$yeet_it" ]; then
+		rm $item
+		echo
+		continue
+	fi
+
+	do_it=''
+	read -e -n 1 -p 'Can this be done in <=5 minutes? (y/n): ' do_it
+	if [ 'y' = "$do_it" ]; then
+		echo 'Then do it right now.'
+		set +e
+		countdown -m 5
+		set -e
+		rm $item
+		echo
+		continue
+	else
+		echo
+	fi
+
+	is_actionable=''
+	read -e -n 1 -p 'Is it actionable? (y/n): ' is_actionable
+	echo
+	if [ 'n' = "$is_actionable" ]; then
+		mv $item $todo_root/maybe
+		echo
+		continue
+	fi
+
+	echo "Clarify $item_name as a taskdir."
+	crash_if_nonzero_exit make_taskdir $item_name
+	taskdir_path="$STDOUT"
+	if [ -s "$item" ] ; then
+		mv "$item" > "$taskdir_path/$(basename "$item")"
+	fi
+
+	rm $item
+	echo
+done
+
+for item in `find $todo_root/new -maxdepth 1 -type d | tail -n+2`; do
+	crash_if_nonzero_exit mark $item
+done
