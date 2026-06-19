@@ -17,9 +17,32 @@ sys.excepthook = _no_traceback_on_interrupt
 HERE = Path(__file__).resolve().parent
 TODO_ROOT = HERE.parent
 
+# Python owns the saved review file directly (no `tee` in the .do wrapper).
+# This lets us capture typed answers into the file WITHOUT echoing them back
+# to the terminal a second time, and keeps interactive TUI escape-garbage
+# (lf/less/timer) out of the artifact.
+_review_path = os.environ.get("WEEKLY_REVIEW_FILE")
+_out = open(_review_path, "w") if _review_path else None
+
+def tee_print(*args, **kwargs):
+    """Print program output to the terminal AND the saved review file."""
+    print(*args, **kwargs)
+    if _out is not None:
+        print(*args, file=_out, **kwargs)
+        _out.flush()
+
+def ask(prompt):
+    """Prompt on the terminal (tty echoes the typed text once); record the
+    answer into the saved review file only — no visible second print."""
+    answer = input(prompt)
+    if _out is not None:
+        _out.write(f"{prompt}{answer}\n")
+        _out.flush()
+    return answer
+
 def run_lf(prompt_msg, path, extra_cmds=""):
     cmd = f'set promptfmt "{prompt_msg} \\033[34;1m%d\\033[0m\\033[1m%f\\033[0m"'
-    args = ["lf", "-command", cmd]
+    args = ["lf", "-command", cmd, "-command", "set ratios 2:3"]
     if extra_cmds:
         for c in extra_cmds.split(";"):
             args.extend(["-command", c.strip()])
@@ -28,7 +51,7 @@ def run_lf(prompt_msg, path, extra_cmds=""):
 
 def run_lf_select(prompt_msg, path, extra_cmds=""):
     cmd = f'set promptfmt "{prompt_msg} \\033[34;1m%d\\033[0m\\033[1m%f\\033[0m"'
-    args = ["lf", "-print-selection", "-command", cmd, "-command", "map q"]
+    args = ["lf", "-print-selection", "-command", cmd, "-command", "map q", "-command", "set ratios 2:3"]
     if extra_cmds:
         for c in extra_cmds.split(";"):
             args.extend(["-command", c.strip()])
@@ -40,33 +63,33 @@ def indent(text, spaces=4):
     return "\n".join(" " * spaces + line for line in text.split("\n"))
 
 # 0. Preliminary Logistics
-print("0. Preliminary Logistics")
-print("i. Walk around the house & Identify what draws your attention. Fix what can be fixed in <=10m ; otherwise, Gather thoughts & things for further processing.")
+tee_print("0. Preliminary Logistics")
+tee_print("i. Walk around the house & Identify what draws your attention. Fix what can be fixed in <=10m ; otherwise, Gather thoughts & things for further processing.")
 time.sleep(3)
-input("\tPress ENTER when done.")
+subprocess.run(["timer", "-m", "10"])
 
-print("ii. Translate any left-over iPhone todo reminders, recurring thoughts, unread messages, hand-written notes, etc, into inputs for todo system.")
+tee_print("ii. Translate any left-over iPhone todo reminders, recurring thoughts, unread messages, hand-written notes, etc, into inputs for todo system.")
 time.sleep(3)
 run_lf("Press T to create a taskdir for any left-over iPhone todos, recurring thoughts, unread messages, hand-written notes, etc.", Path.home() / "main/todo")
 
-print("iii. Update the timestamp for any people under ../relationships/* interacted with this week.")
+tee_print("iii. Update the timestamp for any people under ../relationships/* interacted with this week.")
 time.sleep(3)
 run_lf("Press t to mark anyone you interacted with this week.", Path.home() / "main/relationship", "set sortby time;set info time;set reverse")
 
-print("iv. Schedule a meet-up with someone from your relationship view.")
+tee_print("iv. Schedule a meet-up with someone from your relationship view.")
 time.sleep(3)
 subprocess.run([str(HERE / "schedule_meetup_from_relationship")])
 
-print("v. Mark tasks under ../todo/wait/* as no longer waiting if applicable.")
+tee_print("v. Mark tasks under ../todo/wait/* as no longer waiting if applicable.")
 time.sleep(3)
 run_lf("Press x to mark tasks as no longer waiting if applicable & Write follow-up documentation.", Path.home() / "main/todo/wait")
-print()
+tee_print()
 
 # 1. Post-Mortem of Goals
-print("1. Post-Mortem of Goals")
-print("i. Review time estimations for the past week.")
+tee_print("1. Post-Mortem of Goals")
+tee_print("i. Review time estimations for the past week.")
 time.sleep(3)
-print("Incomplete tasks:")
+tee_print("Incomplete tasks:")
 time.sleep(1)
 
 incomplete_dirs = []
@@ -76,95 +99,87 @@ for cat in ["0_now", "1_today", "2_week"]:
         incomplete_dirs.extend([d for d in cat_path.iterdir() if d.is_dir()])
 
 for t in incomplete_dirs:
-    print(indent(t.name))
+    tee_print(indent(t.name))
     colon_files = list(t.glob(":*"))
     for f in sorted(colon_files):
-        print(indent(f.name, 8))
-    print()
+        tee_print(indent(f.name, 8))
+    tee_print()
 
 time.sleep(1)
-print("Completed tasks + estimation summary:")
+tee_print("Completed tasks + estimation summary:")
 time.sleep(1)
-print(indent("", 4), end="")
-subprocess.run([str(HERE / "summarize_past_time_estimations"), "8"])
-print()
+_summary = subprocess.run([str(HERE / "summarize_past_time_estimations"), "8"], capture_output=True, text=True)
+tee_print(indent(_summary.stdout.rstrip("\n"), 4))
+tee_print()
 time.sleep(1)
 
-print("Write 2 sentence summary-- How was the overall accuracy? Were there any patterns in the misestimations?")
-postmortem_of_time = input("    2 SENTENCES> ")
-print(postmortem_of_time)
+tee_print("Write 2 sentence summary-- How was the overall accuracy? Were there any patterns in the misestimations?")
+postmortem_of_time = ask("    2 SENTENCES> ")
 
-print("ii. Write 2 sentences analyzing why progress was good/mediocre/bad towards particular goals.")
-postmortem_of_progress = input("    2 SENTENCES> ")
-print(postmortem_of_progress)
+tee_print("ii. Write 2 sentences analyzing why progress was good/mediocre/bad towards particular goals.")
+postmortem_of_progress = ask("    2 SENTENCES> ")
 
-print("iii. Write 1-3 sentence list of insights to keep in mind this week, so as to improve our efforts.")
-insights_on_goals = input("    3 SENTENCES> ")
-print(insights_on_goals)
-print()
+tee_print("iii. Write 1-3 sentence list of insights to keep in mind this week, so as to improve our efforts.")
+insights_on_goals = ask("    3 SENTENCES> ")
+tee_print()
 
 # 2. Post-Mortem of Habits
-print("2. Post-Mortem of Habits")
-print("i. Look at the chart of explicitly tracked habits. Write 1-2 sentences describing what you see.")
-postmortem_of_tracked_habits = input("    2 SENTENCES> ")
-print(postmortem_of_tracked_habits)
+tee_print("2. Post-Mortem of Habits")
+tee_print("i. Look at the chart of explicitly tracked habits. Write 1-2 sentences describing what you see.")
+postmortem_of_tracked_habits = ask("    2 SENTENCES> ")
 
-print("ii. Review list of all habits. Identify those having difficulty with compliance.")
+tee_print("ii. Review list of all habits. Identify those having difficulty with compliance.")
 time.sleep(3)
 habits_needing_attention = run_lf_select(
     "Mark habits struggling with compliance, Press Enter to confirm selection.",
     Path.home() / "main/habit"
 )
-print("Habits -- those needing attention:")
-print(indent("\n".join(habits_needing_attention)))
+tee_print("Habits -- those needing attention:")
+tee_print(indent("\n".join(habits_needing_attention)))
 time.sleep(1)
 
-print("iii. Write 2 sentences evaluating the results, trying to explain what caused them.")
-postmortem_of_difficult_habits = input("    2 SENTENCES> ")
-print(postmortem_of_difficult_habits)
+tee_print("iii. Write 2 sentences evaluating the results, trying to explain what caused them.")
+postmortem_of_difficult_habits = ask("    2 SENTENCES> ")
 
-print("iv. Write 1-3 sentence list of actions to resolve the encountered difficulties with compliance.")
-actions_to_improve_habit_compliance = input("    3 SENTENCES> ")
-print(actions_to_improve_habit_compliance)
-print()
+tee_print("iv. Write 1-3 sentence list of actions to resolve the encountered difficulties with compliance.")
+actions_to_improve_habit_compliance = ask("    3 SENTENCES> ")
+tee_print()
 
 # 3. Post-Mortem of Agreements
-print("3. Post-Mortem of Agreements")
-print("i. Recall for 3m: How well did I adhere to my agreements this week?")
+tee_print("3. Post-Mortem of Agreements")
+tee_print("i. Recall for 3m: How well did I adhere to my agreements this week?")
 subprocess.run(["timer", "-m", "3"])
 
-print("ii. Read aloud from the Constitution's articles: ONLY the numbered lines")
+tee_print("ii. Read aloud from the Constitution's articles: ONLY the numbered lines")
 time.sleep(3)
 constitution = Path.home() / "main/agreements/A1:Constitution_for_the_Sovereignty_of_Alexander"
 with open(constitution) as f:
     numbered_lines = [line for line in f if line.strip() and line.lstrip()[0].isdigit() and "." in line.split()[0]]
 subprocess.run(["less"], input="".join(numbered_lines), text=True)
 
-print("iii. Skim the rest of my agreements, relating them to my recent efforts.")
+tee_print("iii. Skim the rest of my agreements, relating them to my recent efforts.")
 time.sleep(3)
 agreements_for_further_focus = run_lf_select(
     "Skim your agreements, considering how they relate to my efforts. Mark any A3s to review for upgrade/revision, or any others for further focus, Press ENTER to confirm selection.",
     Path.home() / "main/agreements"
 )
-print("Agreements -- for further focus:")
-print(indent("\n".join(agreements_for_further_focus)))
+tee_print("Agreements -- for further focus:")
+tee_print(indent("\n".join(agreements_for_further_focus)))
 time.sleep(1)
 
-print("iv. Write 3 sentences evaluating my compliance.")
-postmortem_of_agreement_compliance = input("    3 SENTENCES> ")
-print(postmortem_of_agreement_compliance)
+tee_print("iv. Write 3 sentences evaluating my compliance.")
+postmortem_of_agreement_compliance = ask("    3 SENTENCES> ")
 
-print("v. Write list of 1-3 actions to take in light of the evaluation, so as to curate & adhere to realistic & just agreements.")
-actions_to_improve_agreement_compliance = input("    3 SENTENCES> ")
-print(actions_to_improve_agreement_compliance)
-print()
+tee_print("v. Write list of 1-3 actions to take in light of the evaluation, so as to curate & adhere to realistic & just agreements.")
+actions_to_improve_agreement_compliance = ask("    3 SENTENCES> ")
+tee_print()
 
 # OKR Weekly Check
-print("OKR Weekly Check")
+tee_print("OKR Weekly Check")
 result = subprocess.run([str(HERE / "okr_check")])
 if result.returncode != 0:
-    print("(okr_check skipped or no OKRs found)")
-print()
+    tee_print("(okr_check skipped or no OKRs found)")
+tee_print()
 
 # 4. Time-estimation of Allocatable Work
 QUOTA_DAILY_WORK_HOURS = 1.5
@@ -175,38 +190,42 @@ month_file = TODO_ROOT / "3_month/.time_allocation"
 prev_week_work_hrs_quota = prev_week_file.read_text().strip() if prev_week_file.exists() else str(QUOTA_DAILY_WORK_HOURS * DAYS_IN_WORK_WEEK)
 month_work_hrs_quota = float(month_file.read_text().strip()) if month_file.exists() else 0
 
-print("4. Time-estimation of Allocatable Work")
-subprocess.run(["cal", "-m"])
+tee_print("4. Time-estimation of Allocatable Work")
+_cal = subprocess.run(["cal", "-m"], capture_output=True, text=True)
+tee_print(_cal.stdout.rstrip("\n"))
 
-daily_work_quota = input(f"    Minimum hours of personal work per day [{QUOTA_DAILY_WORK_HOURS}]> ") or str(QUOTA_DAILY_WORK_HOURS)
+daily_work_quota = ask(f"    Minimum hours of personal work per day [{QUOTA_DAILY_WORK_HOURS}]> ") or str(QUOTA_DAILY_WORK_HOURS)
 daily_work_quota = float(daily_work_quota)
 
-work_days = input(f"    Days in work week (excluding today) [{DAYS_IN_WORK_WEEK}]> ") or str(DAYS_IN_WORK_WEEK)
+work_days = ask(f"    Days in work week (excluding today, and remember: take Sundays off, and assume 1.5 days lost per week) [{DAYS_IN_WORK_WEEK}]> ") or str(DAYS_IN_WORK_WEEK)
 work_days = int(work_days)
 
 estimated_work_hours = round(daily_work_quota * work_days, 2)
-print(f"    Estimated work hours: {estimated_work_hours}")
+tee_print(f"    Estimated work hours: {estimated_work_hours}")
 prev_week_file.write_text(str(estimated_work_hours))
 time.sleep(1)
-print()
+tee_print()
 
-hours_worked_last_week = input(f"    Hours to subtract from remaining monthly allocation ({month_work_hrs_quota}h) [{prev_week_work_hrs_quota}]> ") or prev_week_work_hrs_quota
+hours_worked_last_week = ask(f"    Hours to subtract from remaining monthly allocation ({month_work_hrs_quota}h) [{prev_week_work_hrs_quota}]> ") or prev_week_work_hrs_quota
 hours_worked_last_week = float(hours_worked_last_week)
 month_work_hrs_quota = round(month_work_hrs_quota - hours_worked_last_week, 2)
-print(f"    Remaining work hours in month: {month_work_hrs_quota}")
+tee_print(f"    Remaining work hours in month: {month_work_hrs_quota}")
 month_file.write_text(str(month_work_hrs_quota))
 time.sleep(1)
-print()
+tee_print()
 
 # 5. Review of Domains
-print("5. Review of Domains")
-print("i. Skim the domains-of-concern, identify those relevant to planning for this week.")
+tee_print("5. Review of Domains")
+tee_print("i. Skim the domains-of-concern, identify those relevant to planning for this week.")
 time.sleep(3)
 relevant_domains_of_concern = run_lf_select(
     "Mark domains relevant to planning for this week, Press Enter to confirm selection.",
     TODO_ROOT / "#domain"
 )
-print("Domains of Concern -- the weekly plan must account for:")
-print(indent("\n".join(relevant_domains_of_concern)))
+tee_print("Domains of Concern -- the weekly plan must account for:")
+tee_print(indent("\n".join(relevant_domains_of_concern)))
 time.sleep(1)
-print()
+tee_print()
+
+if _out is not None:
+    _out.close()

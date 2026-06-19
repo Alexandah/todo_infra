@@ -43,27 +43,6 @@ for t in $(find "$DONE" -mindepth 1 -type d -mtime -$days_back); do
 	sum_ratio_actual_over_estimate=$(echo "scale=2; $ratio_actual_over_estimate + $sum_ratio_actual_over_estimate" | bc)
 done
 
-# Incomplete tasks (still in active queues) count as underestimated by their full estimate
-for t in $(find "$todo_root"/{0_now,1_today,2_week} -mindepth 1 -type d 2>/dev/null); do
-	# Prefer .time_orig as the original estimate; fall back to :time=*
-	orig_file="$t/.time_orig"
-	if [ -f "$orig_file" ]; then
-		time=$(cat "$orig_file")
-	else
-		tf=("$t"/:time=*)
-		[ -f "${tf[0]}" ] || continue
-		time="${tf[0]##*=}"; time="${time%h}"
-	fi
-	error=$(echo "scale=2; 0 - $time" | bc)
-	ratio_actual_over_estimate=2  # assume overrun at 2x; actual time unknown
-	echo "$(basename $t) (INCOMPLETE)"
-	echo "	expected: $time	actual: ???	error: $error	%-more-or-less: $ratio_actual_over_estimate"
-	echo
-	len=$((len + 1))
-	sum_expected_minus_actual=$(echo "scale=2; 0 - $time + $sum_expected_minus_actual" | bc)
-	sum_ratio_actual_over_estimate=$(echo "scale=2; $ratio_actual_over_estimate + $sum_ratio_actual_over_estimate" | bc)
-done
-
 if [ "$len" -gt 0 ]; then
 	avg_expected_minus_actual=$(echo "scale=2; $sum_expected_minus_actual / $len" | bc)
 	avg_ratio_actual_over_estimate=$(echo "scale=2; $sum_ratio_actual_over_estimate / $len" | bc)
