@@ -18,6 +18,7 @@
 REPO    := $(patsubst %/,%,$(dir $(abspath $(lastword $(MAKEFILE_LIST)))))
 HOOKS   := $(REPO)/claude_hooks
 SKILLS  := $(REPO)/claude_skills
+AGENTS  := $(REPO)/claude_agents
 TMUXCONF:= $(REPO)/tmux.conf
 TODO_CLAUDE_MD := $(REPO)/CLAUDE.todo.md
 
@@ -49,6 +50,7 @@ install:
 	done
 	@$(call LINK,$(TMUXCONF),$(HOME_TMUXCONF))
 	@$(call LINK,$(SKILLS),$(TODO_CLAUDE_DIR)/skills)
+	@$(call LINK,$(AGENTS),$(TODO_CLAUDE_DIR)/agents)
 	@$(call LINK,$(TODO_CLAUDE_MD),$(TODO_ROOT)/CLAUDE.md)
 	@echo "note: $(TODO_ROOT)/CLAUDE.local.md is per-machine (not tracked); create it for machine-specific cross-system areas."
 	@echo "install: done"
@@ -59,5 +61,6 @@ uninstall:
 	done
 	@if [ -L "$(HOME_TMUXCONF)" ]; then rm "$(HOME_TMUXCONF)"; echo "rm $(HOME_TMUXCONF)"; fi
 	@if [ -L "$(TODO_CLAUDE_DIR)/skills" ]; then rm "$(TODO_CLAUDE_DIR)/skills"; echo "rm $(TODO_CLAUDE_DIR)/skills"; fi
+	@if [ -L "$(TODO_CLAUDE_DIR)/agents" ]; then rm "$(TODO_CLAUDE_DIR)/agents"; echo "rm $(TODO_CLAUDE_DIR)/agents"; fi
 	@if [ -L "$(TODO_ROOT)/CLAUDE.md" ]; then rm "$(TODO_ROOT)/CLAUDE.md"; echo "rm $(TODO_ROOT)/CLAUDE.md"; fi
 	@echo "uninstall: done"

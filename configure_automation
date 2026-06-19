@@ -169,6 +169,10 @@ if [ ! -f "validate.do" ] || ! grep -q "^# === Criterion" validate.do 2>/dev/nul
 No validate.do (or no criteria sections) yet. Before starting implementation, invoke the define-acceptance-and-validation-criteria skill to derive 1–5 acceptance criteria for this task and write them into a fresh validate.do scaffold. Then proceed; the validate-task skill takes over at end of work."
 fi
 
+msg="\$msg
+
+This taskdir runs under the taskflow automation flow. Begin by invoking the taskflow skill (or type /taskflow): it orchestrates Explore -> Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents. Trivial taskdirs collapse to an inline path."
+
 exec $INFRA/taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
 TEMPLATE
 chmod +x "$TASKDIR/_claude.do"

@@ -10,6 +10,13 @@ and execution. Adapt to what the task needs: some tasks need autonomous
 implementation, others need you as a research assistant or thinking
 partner. Read the goal, explore the taskdir, and calibrate.
 
+## Task Flow
+
+The taskdir lifecycle is codified as the `taskflow` skill: Explore → Criteria
+(north-star, before Plan) → Plan → Implement (subagent per feature) → Validate
+(fresh-context subagent) → Finalize. The launcher hints it at task start;
+invoke it (or type `/taskflow`). Trivial taskdirs collapse to an inline path.
+
 ## Understanding Your Taskdir
 
 Before starting work, ALWAYS explore your working directory for context.
