@@ -1,0 +1,37 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+source "$HERE"/okr_utils
+
+YEAR=${1:-$CURRENT_YEAR}
+QUARTER=${2:-$CURRENT_QUARTER}
+
+kr_dirs=$(discover_quarterly_krs "$YEAR" "$QUARTER")
+if [ -z "$kr_dirs" ]; then
+    echo "No quarterly KRs found for Q${QUARTER} ${YEAR}."
+    exit 0
+fi
+
+echo -e "${ANSI_BOLD}OKR Summary — Q${QUARTER} ${YEAR}${ANSI_RESET}"
+echo
+printf "%-115s    %-12s  %-5s  %s\n" "KR" "Type" "Score" "Last Updated"
+printf "%-115s    %-12s  %-5s  %s\n" \
+    "$(printf '%0.s-' {1..115})" "$(printf '%0.s-' {1..12})" "-----" "------------"
+
+while IFS= read -r kr_dir; do
+    label=$(kr_label "$kr_dir")
+    [ ${#label} -gt 115 ] && label="${label:0:112}..."
+    kr_type=$(get_kr_type "$kr_dir")
+    last_entry=$(last_progress_entry "$kr_dir")
+
+    if [ -n "$last_entry" ]; then
+        score=$(parse_progress_score "$last_entry")
+        last_date=$(parse_progress_date "$last_entry")
+        sc=$(color_for "$(score_to_status "$score")")
+        printf "%-115s    %-12s  ${sc}%-5s${ANSI_RESET}  %s\n" \
+            "$label" "$kr_type" "$score" "$last_date"
+    else
+        printf "%-115s    %-12s  %-5s  %s\n" \
+            "$label" "$kr_type" "—" "—"
+    fi
+done <<< "$kr_dirs"

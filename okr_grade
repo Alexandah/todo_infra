@@ -1,0 +1,101 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+source "$HERE"/okr_utils
+
+if [ "$CURRENT_QUARTER" -eq 1 ]; then
+    PREV_YEAR=$(( CURRENT_YEAR - 1 ))
+    PREV_QUARTER=4
+else
+    PREV_YEAR=$CURRENT_YEAR
+    PREV_QUARTER=$(( CURRENT_QUARTER - 1 ))
+fi
+YEAR=${1:-$PREV_YEAR}
+QUARTER=${2:-$PREV_QUARTER}
+TODAY=$(date +%Y-%m-%d)
+
+kr_dirs=$(discover_quarterly_krs "$YEAR" "$QUARTER")
+if [ -z "$kr_dirs" ]; then
+    echo "No quarterly KRs found for Q${QUARTER} ${YEAR}."
+    exit 0
+fi
+
+echo -e "${ANSI_BOLD}Grading KRs for Q${QUARTER} ${YEAR}${ANSI_RESET}"
+echo
+
+score_options=$(
+    echo "0.0"
+    echo "0.1"
+    echo "0.2"
+    echo "0.3"
+    echo "0.4"
+    echo "0.5"
+    echo "0.6"
+    echo "0.7"
+    echo "0.8"
+    echo "0.9"
+    echo "1.0"
+)
+
+# Collect grades for summary
+declare -a grade_labels=()
+declare -a grade_scores=()
+declare -a grade_grades=()
+declare -a grade_types=()
+declare -A type_sum=()
+declare -A type_count=()
+
+while IFS= read -r kr_dir; do
+    label=$(kr_label "$kr_dir")
+    kr_type=$(get_kr_type "$kr_dir")
+
+    echo -e "${ANSI_BOLD}$label${ANSI_RESET}  ($kr_type)"
+
+    # Prompt for score
+    crash_if_nonzero_exit 'echo "$score_options" | fzf --prompt="Score for: $label >" $fzf_gap_arg'
+    score="$STDOUT"
+
+    # Prompt for notes
+    run 'echo "" | fzf --prompt="Notes (empty OK) >" --print-query $fzf_gap_arg'
+    notes=$(echo "$STDOUT" | xargs)
+
+    # Compute status (type-independent) and grade (type-dependent)
+    status=$(score_to_status "$score")
+    grade=$(score_to_grade "$score" "$kr_type")
+
+    # Append to progress file
+    echo "$TODAY  $score  $status  $notes" >> "$kr_dir/progress"
+
+    gc=$(color_for "$grade")
+    echo -e "  Grade: ${gc}${score}${ANSI_RESET}"
+    echo
+
+    [ ${#label} -gt 115 ] && label="${label:0:112}..."
+    grade_labels+=("$label")
+    grade_scores+=("$score")
+    grade_grades+=("$grade")
+    grade_types+=("$kr_type")
+    type_sum["$kr_type"]=$(echo "${type_sum[$kr_type]:-0} + $score" | bc)
+    type_count["$kr_type"]=$(( ${type_count[$kr_type]:-0} + 1 ))
+done <<< "$kr_dirs"
+
+# Print summary table
+echo -e "${ANSI_BOLD}=== Q${QUARTER} ${YEAR} Final Grades ===${ANSI_RESET}"
+printf "%-115s    %-12s  %s\n" "KR" "Type" "Grade"
+printf "%-115s    %-12s  %s\n" "$(printf '%0.s-' {1..115})" "$(printf '%0.s-' {1..12})" "-----"
+for i in "${!grade_labels[@]}"; do
+    gc=$(color_for "${grade_grades[$i]}")
+    printf "%-115s    %-12s  ${gc}%s${ANSI_RESET}\n" \
+        "${grade_labels[$i]}" "${grade_types[$i]}" "${grade_scores[$i]}"
+done
+
+# Print aggregate table
+echo
+echo -e "${ANSI_BOLD}=== Aggregate ===${ANSI_RESET}"
+printf "%-12s  %s\n" "Type" "Avg Grade"
+printf "%-12s  %s\n" "------------" "---------"
+for kr_type in "${!type_sum[@]}"; do
+    avg=$(echo "scale=2; ${type_sum[$kr_type]} / ${type_count[$kr_type]}" | bc)
+    gc=$(color_for "$(score_to_grade "$avg" "$kr_type")")
+    printf "%-12s  ${gc}%s${ANSI_RESET}\n" "$kr_type" "$avg"
+done

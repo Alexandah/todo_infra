@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+HERE=$(dirname $(realpath $(which "$0")))
+RELATIONSHIP_DIR=/home/erandalex/main/relationship
+TEMPLATE="$HERE/taskdir_template/Schedule_meet-up_w_PERSON"
+
+selected=$(
+  command lf \
+    -print-selection \
+    -command 'set promptfmt "Select 1 person to schedule a meet-up with. Press ENTER to confirm. \033[34;1m%d\033[0m\033[1m%f\033[0m"' \
+    -command 'set sortby time' \
+    -command 'set info time' \
+    -command 'set reverse' \
+    "$RELATIONSHIP_DIR"
+)
+
+person=$(basename "$selected")
+
+if [ -z "$person" ] || [ "$person" = "$(basename "$RELATIONSHIP_DIR")" ]; then
+  echo '(no person selected — skipping meet-up task creation)'
+  exit 0
+fi
+
+export PERSON="$person"
+"$HERE"/instantiate_taskdir_template "$TEMPLATE"

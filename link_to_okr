@@ -1,0 +1,33 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+source "$HERE"/okr_utils
+
+kr_dirs=$(discover_quarterly_krs)
+if [ -z "$kr_dirs" ]; then
+    echo "No quarterly KRs found for Q${CURRENT_QUARTER} ${CURRENT_YEAR}."
+    exit 0
+fi
+
+# Build display list: relative paths from OKR root, with [no link] default
+kr_list="[no link]"$'\n'
+while IFS= read -r kr_dir; do
+    label=$(kr_label "$kr_dir")
+    kr_list+="${label}	${kr_dir}"$'\n'
+done <<< "$kr_dirs"
+kr_list=$(echo "$kr_list" | sed '/^\s*$/d')
+
+crash_if_nonzero_exit 'echo "$kr_list" | fzf --ansi --prompt="Link to KR >" --with-nth=1 --delimiter="\t" $fzf_gap_arg'
+selected="$STDOUT"
+
+if [ "$selected" = "[no link]" ]; then
+    exit 0
+fi
+
+# Extract the absolute path (second tab-separated field)
+kr_path=$(echo "$selected" | cut -f2)
+kr_name=$(basename "$kr_path")
+
+symlink_name=":KR=$kr_name"
+ln -s "$kr_path" "$symlink_name"
+echo "Created $symlink_name -> $kr_path"

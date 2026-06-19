@@ -1,0 +1,60 @@
+#!/bin/bash
+HERE=$(dirname $(realpath $(which "$0")))
+source "$HERE"/bash_utils
+source "$HERE"/okr_utils
+
+TODAY=$(date +%Y-%m-%d)
+
+kr_dirs=$(discover_quarterly_krs)
+if [ -z "$kr_dirs" ]; then
+    echo "No quarterly KRs found for Q${CURRENT_QUARTER} ${CURRENT_YEAR}."
+    exit 0
+fi
+
+echo -e "${ANSI_BOLD}OKR Weekly Check — Q${CURRENT_QUARTER} ${CURRENT_YEAR}${ANSI_RESET}"
+echo
+
+score_options=$(
+    for s in 1.0 0.9 0.8 0.7 0.6 0.5 0.4 0.3 0.2 0.1; do
+        sc=$(color_for "$(score_to_status "$s")")
+        printf "${sc}${s}${ANSI_RESET}\n"
+    done
+)
+
+while IFS= read -r kr_dir; do
+    label=$(kr_label "$kr_dir")
+    last_entry=$(last_progress_entry "$kr_dir")
+
+    if [ -n "$last_entry" ]; then
+        last_score=$(parse_progress_score "$last_entry")
+        last_status=$(parse_progress_status "$last_entry")
+        last_date=$(parse_progress_date "$last_entry")
+        sc=$(color_for "$(score_to_status "$last_score")")
+        echo -e "${ANSI_BOLD}$label${ANSI_RESET}  (last: ${sc}${last_score}${ANSI_RESET} on $last_date)"
+    else
+        echo -e "${ANSI_BOLD}$label${ANSI_RESET}  (no prior entries)"
+    fi
+
+    # Prompt for score (0.1–1.0, color-coded)
+    crash_if_nonzero_exit 'echo "$score_options" | fzf --ansi --prompt="Score: $label >" $fzf_gap_arg'
+    score=$(echo "$STDOUT" | grep -oE '[0-9]+\.[0-9]+')
+    status=$(score_to_status "$score")
+
+    # Prompt for optional note
+    run 'echo "" | fzf --prompt="Note (empty OK) >" --print-query $fzf_gap_arg'
+    notes=$(echo "$STDOUT" | xargs)
+
+    # Append to progress file
+    echo "$TODAY  $score  $status  $notes" >> "$kr_dir/progress"
+    sc=$(color_for "$status")
+    echo -e "  Progress check-in: ${sc}${score}${ANSI_RESET}"
+
+    # Warn if red for 2+ consecutive entries
+    red_streak=$(grep -v '^#' "$kr_dir/progress" 2>/dev/null | grep -v '^\s*$' | tail -2 | awk '{print $3}' | grep -c 'red')
+    if [ "$red_streak" -ge 2 ]; then
+        echo -e "  $(color_for red)WARNING: Red for 2+ consecutive entries — consider corrective action${ANSI_RESET}"
+    fi
+    echo
+done <<< "$kr_dirs"
+
+echo "OKR check complete."
