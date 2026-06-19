@@ -171,7 +171,7 @@ fi
 
 msg="\$msg
 
-This taskdir runs under the taskflow automation flow. Begin by invoking the taskflow skill (or type /taskflow): it orchestrates Explore -> Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents. Trivial taskdirs collapse to an inline path."
+This taskdir runs under the taskflow automation flow. Even in plan mode, your FIRST action MUST be to invoke the taskflow skill (or type /taskflow) — do NOT fall into the generic plan-mode workflow instead. It orchestrates Explore -> Define Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents. Trivial taskdirs collapse to an inline path."
 
 exec $INFRA/taskdir_tmux_launch "\$taskdir" \$CLAUDE_ARGS "\$msg"
 TEMPLATE
