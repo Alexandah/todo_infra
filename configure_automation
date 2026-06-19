@@ -59,7 +59,7 @@ model_choice="$STDOUT"
 effort_choice=""
 if [[ "$model_choice" != "haiku" ]]; then
     crash_if_nonzero_exit \
-        'printf "medium\nlow\nhigh\nmax" | fzf --prompt="EFFORT > " \
+        'printf "medium\nlow\nhigh\nmax\nultracode" | fzf --prompt="EFFORT > " \
             --header="Effort level (affects depth of reasoning)" '"$fzf_gap_arg"
     effort_choice="$STDOUT"
 fi
