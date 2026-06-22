@@ -22,13 +22,6 @@ no-user-input work to isolated subagents and keeps its own context small.
 - **The human owns direction.** The conductor proposes; the user disposes at
   each GATE. Gates are STOP points — do not proceed past one without the user.
 
-## Trivial-task collapse (check FIRST)
-If the taskdir is small — time estimate < ~0.5h, or a single-file / single-step
-change — **COLLAPSE**: skip subagent fan-out and run Explore + Plan + Implement
-inline in this session. Still do Criteria (lightweight) and Validate, still
-honor the gates. Per-subagent spin-up + re-briefing overhead only pays off when
-task size justifies it; most taskdirs here are small.
-
 ## The six phases
 
 ### 1. Explore — subagent: `taskflow-explorer` [haiku, read-only]
@@ -36,7 +29,7 @@ Dispatch `taskflow-explorer` (Task tool, `subagent_type: taskflow-explorer`).
 It reads the goal note + taskdir + relevant filesystem context + any relevant web searches
 and returns a `<=40`-line digest (relevant files, inferred intent, constraints,
 risks, open questions). Merge it; post a 3-bullet read to the user.
-- **GATE A** (light, skippable for trivial): "Is this the right framing/scope?"
+- **GATE A** (light): "Is this the right framing/scope?"
   Catches a wrong-problem before any effort is spent planning.
 
 ### 2. Define Criteria — NORTH STAR (before Plan) — skill: `define-acceptance-and-validation-criteria`

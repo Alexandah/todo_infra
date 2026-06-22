@@ -7,10 +7,10 @@ source "$HERE"/bash_utils
 todo_root=$(dirname $(dirname $(realpath $(which "$0"))))
 
 for item in `find $todo_root/new -maxdepth 1 -type f`; do
-	item_name=$(basename $item)
+	item_name=$(basename "$item")
 	echo "--- $item_name ---"
 	if [ -s "$item" ] ; then
-		cat $item
+		cat "$item"
 		echo "--- $item_name ---"
 	fi
 
@@ -18,7 +18,7 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 	read -e -n 1 -p 'Should we just delete & forget about this? (y/n): ' yeet_it
 	echo
 	if [ 'y' = "$yeet_it" ]; then
-		rm $item
+		rm "$item"
 		echo
 		continue
 	fi
@@ -30,7 +30,7 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		set +e
 		countdown -m 5
 		set -e
-		rm $item
+		rm "$item"
 		echo
 		continue
 	else
@@ -41,22 +41,22 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 	read -e -n 1 -p 'Is it actionable? (y/n): ' is_actionable
 	echo
 	if [ 'n' = "$is_actionable" ]; then
-		mv $item $todo_root/maybe
+		mv "$item" $todo_root/maybe
 		echo
 		continue
 	fi
 
 	echo "Clarify $item_name as a taskdir."
-	crash_if_nonzero_exit make_taskdir $item_name
+	crash_if_nonzero_exit make_taskdir "$item_name"
 	taskdir_path="$STDOUT"
 	if [ -s "$item" ] ; then
-		mv "$item" > "$taskdir_path/$(basename "$item")"
+		mv "$item" > "$taskdir_path/$item_name"
 	fi
 
-	rm $item
+	rm "$item"
 	echo
 done
 
 for item in `find $todo_root/new -maxdepth 1 -type d | tail -n+2`; do
-	crash_if_nonzero_exit mark $item
+	crash_if_nonzero_exit mark "$item"
 done
