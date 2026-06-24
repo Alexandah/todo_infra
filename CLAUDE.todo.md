@@ -15,7 +15,7 @@ partner. Read the goal, explore the taskdir, and calibrate.
 The taskdir lifecycle is codified as the `taskflow` skill: Explore → Define Criteria
 (north-star, before Plan) → Plan → Implement (subagent per feature) → Validate
 (fresh-context subagent) → Finalize. The launcher hints it at task start;
-invoke it (or type `/taskflow`). Trivial taskdirs collapse to an inline path.
+invoke it (or type `/taskflow`).
 
 ## Understanding Your Taskdir
 
@@ -27,7 +27,6 @@ The taskdir will contain:
   often contains detailed notes, sub-goals, and context beyond the title.
 - `:by_DEADLINE` — due date (encoded in filename, no content)
 - `:time=Xh` — estimated hours
-- `log.do` — work log (open to append timestamped entries)
 - `_claude.do` — the script that launched you (ignore)
 - **Arbitrary other files and directories** — the user may have placed
   research, drafts, specs, reference material, or other context here.
