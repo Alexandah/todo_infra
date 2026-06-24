@@ -40,6 +40,20 @@ def ask(prompt):
         _out.flush()
     return answer
 
+def capture_actions():
+    """Capture follow-up action items as todo-snippets, one per line.
+    Blank line finishes. Each item -> `todo <item>` (creates new/<item>) and is
+    recorded into the review artifact. Non-coercive: blank straight away = skip."""
+    tee_print("    Capture follow-up actions as todo-snippets (one per line, blank to finish):")
+    while True:
+        item = input("    ACTION> ").strip()
+        if not item:
+            break
+        subprocess.run([str(HERE / "todo"), item])
+        if _out is not None:
+            _out.write(f"    ACTION> {item}\n")
+            _out.flush()
+
 def run_lf(prompt_msg, path, extra_cmds=""):
     cmd = f'set promptfmt "{prompt_msg} \\033[34;1m%d\\033[0m\\033[1m%f\\033[0m"'
     args = ["lf", "-command", cmd, "-command", "set ratios 2:3"]
@@ -121,6 +135,7 @@ postmortem_of_progress = ask("    2 SENTENCES> ")
 
 tee_print("iii. Write 1-3 sentence list of insights to keep in mind this week, so as to improve our efforts.")
 insights_on_goals = ask("    3 SENTENCES> ")
+capture_actions()
 tee_print()
 
 # 2. Post-Mortem of Habits
@@ -143,6 +158,7 @@ postmortem_of_difficult_habits = ask("    2 SENTENCES> ")
 
 tee_print("iv. Write 1-3 sentence list of actions to resolve the encountered difficulties with compliance.")
 actions_to_improve_habit_compliance = ask("    3 SENTENCES> ")
+capture_actions()
 tee_print()
 
 # 3. Post-Mortem of Agreements
@@ -172,6 +188,7 @@ postmortem_of_agreement_compliance = ask("    3 SENTENCES> ")
 
 tee_print("v. Write list of 1-3 actions to take in light of the evaluation, so as to curate & adhere to realistic & just agreements.")
 actions_to_improve_agreement_compliance = ask("    3 SENTENCES> ")
+capture_actions()
 tee_print()
 
 # OKR Weekly Check
