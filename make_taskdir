@@ -62,7 +62,14 @@ estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $PLAN
 
 taskdir=$TODOROOT/new/$goal
 mkdir $taskdir
-touch $taskdir/::$goal.hmm
+cat > $taskdir/::$goal.hmm << EOF
+::$goal
+	BACKGROUND
+	motivates
+	ACTION
+	to cause
+	RESULT
+EOF
 touch $taskdir/:by_?
 touch $taskdir/:time=${estimated_time}h
 echo "$estimated_time" > $taskdir/.time_orig
