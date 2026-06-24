@@ -82,11 +82,11 @@ chmod +x $taskdir/_configure_automation.do
 #	taskdir=$(find "$TODOROOT/0_now" -type f -name "$goal.hmm" -exec dirname {} \; | head -n 1)
 #fi
 
+# 06-22-26  turning off since we have not yet used the OKR system (and we may yet decide not to ever)
 # Setup link_okr.do for future OKR linking from lf
-cp "$HERE"/link_okr.do "$taskdir"/.link_okr.do
-chmod +x "$taskdir"/.link_okr.do
-
+#cp "$HERE"/link_okr.do "$taskdir"/.link_okr.do
+#chmod +x "$taskdir"/.link_okr.do
 # Prompt to link to OKR (link_to_okr has a [no link] default)
-(cd "$taskdir" && "$HERE"/link_to_okr)
+#(cd "$taskdir" && "$HERE"/link_to_okr)
 
 echo $taskdir

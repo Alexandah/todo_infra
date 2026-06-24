@@ -50,10 +50,10 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 	crash_if_nonzero_exit make_taskdir "$item_name"
 	taskdir_path="$STDOUT"
 	if [ -s "$item" ] ; then
-		mv "$item" > "$taskdir_path/$item_name"
+		mv "$item" "$taskdir_path/$item_name"
+    else
+        rm "$item"
 	fi
-
-	rm "$item"
 	echo
 done
 
