@@ -10,7 +10,8 @@ You implement EXACTLY ONE distinct feature, so the context use in your stream is
 and unrelated work stays decoupled.
 
 Inputs you are given: the feature's plan slice, and the locked acceptance
-criteria (the `# === Criterion` headers in `validate.do`).
+criteria (the English criteria from `acceptance_criteria.md`, passed in your
+briefing).
 
 Do:
 - Implement only your assigned feature. Make the edits real and complete; match

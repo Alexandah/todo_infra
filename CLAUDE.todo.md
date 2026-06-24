@@ -48,16 +48,25 @@ NOT ALLOWED:
 
 ## Validation Loop Per Task
 
-See global CLAUDE.md "Validation & Debug Ownership" for the two-prong duty.
+The global CLAUDE.md "Validation & Debug Ownership" mandates a two-prong duty
+(deterministic verifier + your judgment). **For ad-hoc taskdirs, this section
+overrides the deterministic-verifier prong** — taskdirs are general-purpose, not
+the sterile, contract-bound environments where mechanical check suites earn
+their keep, so auto-generated checks there almost always pass on the first try
+and only burn tokens. Validation here is **acceptance criteria judged by
+`/goal`**, not a `validate.do`:
 
-For taskdirs with non-trivial validation, use the `validate-task` skill to scaffold and run `validate.do`.
-Iteratively refine `validate.do` during work to encode more of what "done" means deterministically.
-On `PASS=N FAIL=0` AND your own judgment passes, indicate that the task is complete.
-On non-zero exit OR judgment fail, autonomous-resolution loop applies before
-surfacing.
-
-For non-code deliverables (notes, plans, markdown): deterministic prong = file presence + `grep` for required content + structural checks.
-Judgment prong fills the gap for prose quality / intent fidelity.
+- Define 1–5 English acceptance criteria (the
+  `define-acceptance-and-validation-criteria` skill persists them to
+  `acceptance_criteria.md`).
+- Drive the work to meet them, then pass them to `/goal` — it judges from the
+  transcript whether each is met, looping until satisfied. For engineered tasks
+  (tests, lint, build), RUN them and surface their output so `/goal` can confirm
+  they ran and passed.
+- Your own judgment remains the second prong: read the diff, confirm intent
+  fidelity. On `/goal` satisfied AND your judgment passing, indicate the task is
+  complete; otherwise the autonomous-resolution loop (~3 cycles) applies before
+  surfacing.
 
 ## Cross-System Areas
 

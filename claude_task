@@ -36,13 +36,6 @@ $hmm_content"
     fi
 fi
 
-# If validate.do is missing or has no criteria, hint Claude to derive them
-if [ ! -f "validate.do" ] || ! grep -q "^# === Criterion" validate.do 2>/dev/null; then
-    msg="$msg
-
-No validate.do (or no criteria sections) yet. Before starting implementation, invoke the define-acceptance-and-validation-criteria skill to derive 1–5 acceptance criteria for this task and write them into a fresh validate.do scaffold. Then proceed; the validate-task skill takes over at end of work."
-fi
-
 msg="$msg
 
 This taskdir runs under the taskflow automation flow. Even in plan mode, your FIRST action MUST be to invoke the taskflow skill (or type /taskflow) — do NOT fall into the generic plan-mode workflow instead. It orchestrates Explore -> Define Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents. Trivial taskdirs collapse to an inline path."

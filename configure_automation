@@ -1,8 +1,8 @@
 #!/bin/bash
 # configure_automation — Interactive Claude taskdir configuration wizard
 # Walks the user through model/effort/mode choices, produces a configured
-# _claude.do (which hints Claude to derive acceptance criteria via the
-# define-acceptance-and-validation-criteria skill on task start), then
+# _claude.do (which tells Claude to run the taskflow skill, which derives
+# acceptance criteria on task start), then
 # self-deletes.
 set -e
 
@@ -161,12 +161,6 @@ if [ -f "\$goal_file" ]; then
 Task notes:
 \$hmm_content"
     fi
-fi
-
-if [ ! -f "validate.do" ] || ! grep -q "^# === Criterion" validate.do 2>/dev/null; then
-    msg="\$msg
-
-No validate.do (or no criteria sections) yet. Before starting implementation, invoke the define-acceptance-and-validation-criteria skill to derive 1–5 acceptance criteria for this task and write them into a fresh validate.do scaffold. Then proceed; the validate-task skill takes over at end of work."
 fi
 
 msg="\$msg
