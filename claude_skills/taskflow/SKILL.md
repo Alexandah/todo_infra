@@ -37,7 +37,7 @@ The most important gate: define what "done" means **before planning**. Everythin
   $(cat ~/main/todo/.infra/prompt_qa_policy.md)"
   ```
   Let the session self-iterate to the bar, then the goal clears.
-- **GATE C (LOAD-BEARING):** `AskUserQuestion` — present the criteria, ask "Approve these acceptance criteria?" Options: Approve / Edit / Add criterion / Remove criterion. Do not plan until the north star is locked.
+- **GATE C (LOAD-BEARING):** `AskUserQuestion` — present the criteria, ask "Approve these acceptance criteria?" Options: Approve / Make stricter / Add criterion / Remove criterion. Do not plan until the north star is locked.
 
 ### 3. Plan — conductor [in-session]
 
@@ -91,7 +91,7 @@ Cap the autonomous fix→revalidate loop at ~3 cycles (matches the constitution'
 
 Explicit checklist:
 
-1. **Git gate:** detect whether the work touched a git repo.
+1. **Git gate:** detect whether the work touched a git repo by running `git -C <modified-file-dir> rev-parse --is-inside-work-tree` for each modified file's directory — NOT from the taskdir, which is often outside any repo.
    - If yes: `AskUserQuestion` — offer to commit (and optionally push) with a proposed commit message. Commit/push **only on explicit approval**.
    - **GATE E (git):** user approves the message + push, or declines.
    - If not a git repo: skip cleanly.
