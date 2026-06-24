@@ -110,6 +110,25 @@ Criteria / Implement / Validate each get a `/goal` condition so the session self
 - **CODE-ENFORCED (hard):** ExitPlanMode (native blocking gate) — the ONLY hard gate. It cannot be skipped.
 - **MODEL-FOLLOWED (soft):** everything else — the done-signal, phase order, intermediate gates — are directives this conductor follows. This is strictly more codified than prose but is not a hard interpreter. Do NOT add a `Stop` hook to force gates — the only `Stop` slot is taken by `tmux-move-done.sh`; a competing blocking `Stop` hook would create incoherent dashboard state.
 
+## Stage Dialog Logging
+
+After EVERY `AskUserQuestion` gate response is received, append one JSON line to:
+```
+~/main/todo/.infra/log/taskflow_gate_choices.jsonl
+```
+
+Format (one line, no pretty-print):
+```json
+{"task":"<taskdir-goal-name>","gate":"<A|B|C|D|E>","phase":"<phase-name>","options":["<opt1>","<opt2>",...],"chosen":"<exact-option-text>","is_default":<true|false>}
+```
+
+Rules:
+- `is_default`: `true` if user chose the **first** option listed, `false` otherwise.
+- Gate B (ExitPlanMode) is a native gate — log `"chosen":"Approved"` / `"chosen":"Rejected"` / `"chosen":"Edited"` based on what the user did, `is_default` = `true` only on clean Approved.
+- Append via Bash: `echo '<line>' >> <file>` (create file if absent, that's fine).
+- Log BEFORE proceeding to next phase — do not skip on timeout or early exit.
+- If the taskdir basename is ambiguous, use the full path relative to `~/main/doc/todo/`.
+
 ## Anti-patterns
 
 - Planning before the criteria north star is locked (Gate C).
