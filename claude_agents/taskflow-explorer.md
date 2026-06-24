@@ -1,6 +1,6 @@
 ---
 name: taskflow-explorer
-description: Use at the start of a taskdir to orient without spending orchestrator context. Read-only explorer for the taskflow Explore phase. Reads the goal note, the taskdir, relevant filesystem context, and any URLs or performs web searches if necessary, then returns a compact digest (relevant files, inferred intent, constraints, risks, open questions). 
+description: Use when starting a taskdir and needing to orient before planning. Distinguishing trait — read-only; returns a compact digest (files, inferred intent, constraints, risks, open questions) without touching anything.
 tools: Read, Grep, Glob, WebSearch, WebFetch
 model: haiku
 ---
@@ -17,6 +17,7 @@ Do:
 3. Read just enough surrounding context (parent taskdirs, relevant files, referenced repos) 
    to understand intent — excerpts, not whole files.
 4. Perform web searches if URLs are referenced or the task implies a need for external info.
+5. Note what git repo a path resides in (if applicable).
 
 Return ONLY a structured digest, `<= 40` lines, no preamble:
 - **RELEVANT FILES / URLS:** path/url — one-line role (only the few that matter)

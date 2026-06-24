@@ -1,13 +1,13 @@
 ---
 name: define-acceptance-and-validation-criteria
-description: Use to define what completion looks like when starting work in a taskdir. Derives 1–5 English acceptance criteria via critical thinking on goal+context first, Q&A with the user only when self-resolution fails, then persists them to acceptance_criteria.md (the durable north-star record) for handoff to /goal. The taskflow Validate phase judges them via /goal — there is no validate.do.
+description: Use at the start of a taskdir (and on each re-entered increment), before planning, to establish what "done" means.
 tools: Read, Write, Edit, AskUserQuestion, Grep, Glob
 ---
 
 # define-acceptance-and-validation-criteria
 
 > "Validation criteria" here = criteria that `/goal` validates the work against,
-> NOT a validation script. This skill writes the English criteria only.
+> NOT a validation script. This skill writes English criteria only.
 
 You own the criteria. Derive them yourself first; treat the user as a
 last-resort tiebreaker, not a default.
