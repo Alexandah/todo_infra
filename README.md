@@ -12,7 +12,7 @@ launches Claude Code agents into a live tmux dashboard, one pane per task.
 ## Layout
 
 ### Task-system tooling
-- `make_taskdir`, `instantiate_taskdir_template`, `taskdir_template/` — create tasks
+- `make_taskdir`, `instantiate_taskdir_template`, `taskdir_template/` — create tasks; 5 weekly templates auto-spawn via cron (see below)
 - `mark`, `process_inbox` — move tasks between categories / triage the inbox
 - `log_time`, `summarize_past_time_estimations` — time tracking
 - `make_okr`, `okr_*`, `link_to_okr` — OKR tracking
@@ -40,6 +40,30 @@ launches Claude Code agents into a live tmux dashboard, one pane per task.
   `define-acceptance-and-validation-criteria`); validation is `/goal` over
   acceptance criteria, not a deterministic script. Symlinked to
   `~/main/todo/.claude/skills`
+
+## Recurring cron jobs
+
+5 weekly taskdirs auto-spawn every **Sunday at 12:01am** via the user crontab
+(`crontab -l` to inspect). Each entry calls `instantiate_taskdir_template` with
+an absolute template path and logs to `cron.log` in this directory:
+
+| Template | Purpose |
+|---|---|
+| `Process_todo-inbox_until_empty_DATE` | Clear inbox |
+| `Select_taskdirs_for_next_week_DATE` | Plan the week |
+| `Skim_all_non-done_taskdirs_for_any_dubiously-chunked_to_Refactor:_Delete,_Replace,_or_Split_DATE` | Chunking audit |
+| `Weekly_Review_DATE` | Weekly review |
+| `Sort_taskdirs_to_ensure_no_task-category_exceeds_its_time_allocation_DATE` | Time budget sort |
+
+The `cronie` daemon must be running (`systemctl is-active cronie`). To install
+on a new machine, re-run the crontab setup:
+
+```sh
+crontab -l   # inspect current entries
+# paste the 5 lines from an existing machine's crontab -l, adjusting paths if needed
+```
+
+Output and errors go to `~/main/todo/.infra/cron.log`.
 
 ## Symlink / install model
 
