@@ -1,0 +1,25 @@
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"E","phase":"Finalize","options":["Branch + commit","Commit on main","Branch, commit, push","Don't commit"],"chosen":"Branch + commit","is_default":false}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Be stricter","is_default":false}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Remove criterion"],"chosen":"Make stricter","is_default":false}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_III","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"B","phase":"Plan","options":["Approve","Edit","Reject"],"chosen":"Approved","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Reframe","is_default":false}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Be stricter","is_default":false}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_III","gate":"C","phase":"Define Criteria","options":["Approve","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Be stricter","is_default":false}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_III","gate":"B","phase":"Plan","options":["Approved","Rejected","Edited"],"chosen":"Approved","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_III","gate":"D","phase":"Validate","options":["Accept","Reject"],"chosen":"Accept","is_default":true}
+{"task":"new/Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_II","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
+{"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"D","phase":"Validate (live retest)","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
+{"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"E","phase":"Finalize","options":["Commit, no push","Squash into first","Commit + push","Don't commit"],"chosen":"Commit, no push","is_default":true}

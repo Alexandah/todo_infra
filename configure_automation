@@ -65,26 +65,29 @@ if [[ "$model_choice" != "haiku" ]]; then
 fi
 
 # ── Planning mode ────────────────────────────────────────────────────────────
-crash_if_nonzero_exit \
-    'printf "no — act immediately (default)\nyes — plan before acting" | fzf \
-        --prompt="PLAN MODE > " \
-        --header="Plan mode: Claude proposes a plan and waits for approval" '"$fzf_gap_arg"
-planning_raw="$STDOUT"
-if [[ "$planning_raw" == yes* ]]; then
-    perm_mode="plan"
-else
-    # ── Permission mode (only asked when not in plan mode) ────────────────────
-    crash_if_nonzero_exit \
-        'printf "default — prompt for each tool\nauto — auto-accept edits" | fzf \
-            --prompt="PERMISSION MODE > " \
-            --header="auto: minimal friction; default: confirm every tool use" '"$fzf_gap_arg"
-    perm_raw="$STDOUT"
-    if [[ "$perm_raw" == auto* ]]; then
-        perm_mode="auto"
-    else
-        perm_mode="default"
-    fi
-fi
+# 06-24-26      Seems redundant with new /taskflow skill, which systematically requires each taskdir to enter plan mode, and since we always use automode
+#               So setting to always be automode for now
+perm_mode="auto"
+#crash_if_nonzero_exit \
+#    'printf "no — act immediately (default)\nyes — plan before acting" | fzf \
+#        --prompt="PLAN MODE > " \
+#        --header="Plan mode: Claude proposes a plan and waits for approval" '"$fzf_gap_arg"
+#planning_raw="$STDOUT"
+#if [[ "$planning_raw" == yes* ]]; then
+#    perm_mode="plan"
+#else
+#    # ── Permission mode (only asked when not in plan mode) ────────────────────
+#    crash_if_nonzero_exit \
+#        'printf "default — prompt for each tool\nauto — auto-accept edits" | fzf \
+#            --prompt="PERMISSION MODE > " \
+#            --header="auto: minimal friction; default: confirm every tool use" '"$fzf_gap_arg"
+#    perm_raw="$STDOUT"
+#    if [[ "$perm_raw" == auto* ]]; then
+#        perm_mode="auto"
+#    else
+#        perm_mode="default"
+#    fi
+#fi
 
 # ── settings.local.json ───────────────────────────────────────────────────────
 # 05-27-26		I have never used this, commenting out for now

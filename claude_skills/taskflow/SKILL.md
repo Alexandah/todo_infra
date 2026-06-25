@@ -74,6 +74,7 @@ Dispatch `taskflow-validator` in a **fresh context** — it has not seen the imp
 
 - reads `acceptance_criteria.md` and adversarially checks the work against each criterion — actively hunting where it FAILS the intent, not where it passes;
 - for any criterion resting on an engineered check (tests, linter, build), RUNS it and **echoes the output** — never greps source for a string (proves nothing the Edit tool didn't already);
+- **for interactive / runtime systems, EXERCISES the integrated system live as the user would** — actually run it (start the process, fire the keybind/command, drive the real state) and echo what happened. Static checks (`bash -n`, logic sims, code-traces) prove syntax and isolated logic, NOT integration. They do NOT substitute for running the thing. Explicitly hunt the states a fresh artifact won't have exercised: cold-start / empty state, pre-existing state from before the change was installed, missed/late events, deployment gaps (symlink not installed, config not reloaded, CRLF). If a criterion can only be confirmed by a human driving the live UI, say so and route it to GATE D as an explicit user acceptance test rather than claiming PASS on static evidence;
 - returns a **per-criterion verdict** (PASS/FAIL + why) + adversarial findings.
 
 `/goal`:
@@ -136,6 +137,7 @@ Rules:
 - The conductor editing task artifacts directly — **every edit goes through a `taskflow-implementer` subagent**, no exceptions.
 - The conductor reading source files or running grep/read to explore directly — **delegate ALL reading to a `taskflow-explorer` subagent**; the conductor's context holds only digests, criteria, and the goal note.
 - Validating in the conductor's own context — use the fresh-context subagent.
+- Passing Validate on static checks alone (`bash -n` / sims / code-trace) for an interactive or runtime system without ever running it live — this is exactly how a real integration bug (cold-start, pre-existing state, deploy gap) slips a green Validate. Exercise it live, or route the live check to GATE D as a user acceptance test.
 - Pulling raw file dumps / full diffs into the conductor (defeats the purpose).
 - Scaffolding deterministic checks for ad-hoc criteria that pass trivially — let `/goal` judge the transcript instead.
 - Running tests/build without surfacing their output — `/goal` can only judge what the transcript shows.
