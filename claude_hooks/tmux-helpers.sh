@@ -9,6 +9,178 @@
 CLAUDE_DASH_SESSION="claude-dash"
 CLAUDE_DASH_WINDOW="dash"
 CLAUDE_DASH_LOCKFILE="/tmp/claude-dash-relayout.lock"
+CLAUDE_DASH_PERMS_STACK="${CLAUDE_DASH_PERMS_STACK:-/tmp/claude-dash-perms.stack}"
+CLAUDE_DASH_DONE_STACK="${CLAUDE_DASH_DONE_STACK:-/tmp/claude-dash-done.stack}"
+
+# --- _dash_stack_push ---
+# Push pane_id onto a stack file (dedupe-then-append so it is the unique top).
+# Usage: _dash_stack_push <stack_file> <pane_id>
+_dash_stack_push() {
+    local file="$1"
+    local pane_id="$2"
+    local tmp
+    tmp=$(mktemp "${file}.tmp.XXXXXX")
+    # Remove any existing entry for this pane_id, then append it as new top.
+    if [ -f "$file" ]; then
+        grep -Fxv "$pane_id" "$file" > "$tmp" || true
+    fi
+    printf '%s\n' "$pane_id" >> "$tmp"
+    mv -f "$tmp" "$file"
+}
+
+# --- _dash_stack_remove ---
+# Remove all lines equal to pane_id from a stack file.
+# Usage: _dash_stack_remove <stack_file> <pane_id>
+_dash_stack_remove() {
+    local file="$1"
+    local pane_id="$2"
+    [ -f "$file" ] || return 0
+    local tmp
+    tmp=$(mktemp "${file}.tmp.XXXXXX")
+    grep -Fxv "$pane_id" "$file" > "$tmp" || true
+    mv -f "$tmp" "$file"
+}
+
+# --- _dash_stack_pop ---
+# Print the top (last line) of the stack and remove it.
+# Skips/discards pane ids that are no longer live in the dash session.
+# Prints nothing if the stack is empty or all entries are stale.
+# Usage: _dash_stack_pop <stack_file>
+_dash_stack_pop() {
+    local file="$1"
+    [ -f "$file" ] || return 0
+    local live_panes pane_id tmp
+    live_panes=$(tmux list-panes -s -t "$CLAUDE_DASH_SESSION" -F '#{pane_id}' 2>/dev/null || true)
+    while true; do
+        [ -f "$file" ] || break
+        # Read last line
+        pane_id=$(tail -n 1 "$file" 2>/dev/null)
+        [ -z "$pane_id" ] && break
+        # Remove it from the stack unconditionally
+        tmp=$(mktemp "${file}.tmp.XXXXXX")
+        head -n -1 "$file" > "$tmp" 2>/dev/null || true
+        mv -f "$tmp" "$file"
+        # Check liveness using exact match
+        if printf '%s\n' "$live_panes" | grep -Fxq "$pane_id"; then
+            printf '%s\n' "$pane_id"
+            return 0
+        fi
+        # Pane is stale — continue to next candidate
+    done
+}
+
+# --- _dash_stacks_update ---
+# Update PERMS and DONE stacks when a pane changes column.
+# Usage: _dash_stacks_update <pane_id> <newcol>
+_dash_stacks_update() {
+    local pane_id="$1"
+    local newcol="$2"
+    case "$newcol" in
+        perms)
+            _dash_stack_remove "$CLAUDE_DASH_DONE_STACK"  "$pane_id"
+            _dash_stack_push   "$CLAUDE_DASH_PERMS_STACK" "$pane_id"
+            ;;
+        done)
+            _dash_stack_remove "$CLAUDE_DASH_PERMS_STACK" "$pane_id"
+            _dash_stack_push   "$CLAUDE_DASH_DONE_STACK"  "$pane_id"
+            ;;
+        *)
+            _dash_stack_remove "$CLAUDE_DASH_PERMS_STACK" "$pane_id"
+            _dash_stack_remove "$CLAUDE_DASH_DONE_STACK"  "$pane_id"
+            ;;
+    esac
+}
+
+# --- _dash_zen_valid ---
+# Returns 0 iff pane_id is non-empty, live, in perms or done column,
+# and does NOT have @zen_placeholder == 1.
+# Usage: _dash_zen_valid <pane_id>
+_dash_zen_valid() {
+    local pane_id="$1"
+    [ -z "$pane_id" ] && return 1
+    # Check liveness
+    tmux list-panes -s -t "$CLAUDE_DASH_SESSION" -F '#{pane_id}' 2>/dev/null \
+        | grep -Fxq "$pane_id" || return 1
+    # Check column
+    local col
+    col=$(tmux show-options -p -t "$pane_id" -v @column 2>/dev/null)
+    case "$col" in
+        perms|done) ;;
+        *) return 1 ;;
+    esac
+    # Reject placeholder panes
+    local placeholder
+    placeholder=$(tmux show-options -p -t "$pane_id" -v @zen_placeholder 2>/dev/null)
+    [ "$placeholder" = "1" ] && return 1
+    return 0
+}
+
+# --- _dash_zen_pick ---
+# Echo the pane id that should become the zen Main.
+# Priority: top of PERMS stack -> top of DONE stack -> placeholder pane.
+_dash_zen_pick() {
+    local pane_id
+    pane_id=$(_dash_stack_pop "$CLAUDE_DASH_PERMS_STACK")
+    if [ -n "$pane_id" ]; then
+        printf '%s\n' "$pane_id"
+        return 0
+    fi
+    pane_id=$(_dash_stack_pop "$CLAUDE_DASH_DONE_STACK")
+    if [ -n "$pane_id" ]; then
+        printf '%s\n' "$pane_id"
+        return 0
+    fi
+    # Fall back to the session-registered placeholder pane
+    tmux show-options -t "$CLAUDE_DASH_SESSION" -v @zen_placeholder_pane 2>/dev/null || true
+}
+
+# --- dash_zen_render ---
+# Zoom the current zen Main pane. Selects a new Main if the current one is invalid.
+# Serialized with the same flock pattern as dash_relayout.
+dash_zen_render() {
+    {
+    flock 9
+
+    tmux has-session -t "$CLAUDE_DASH_SESSION" 2>/dev/null || return 0
+
+    local target="$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW"
+    local cur
+    cur=$(tmux show-options -t "$CLAUDE_DASH_SESSION" -v @zen_main 2>/dev/null || true)
+
+    if ! _dash_zen_valid "$cur"; then
+        cur=$(_dash_zen_pick)
+        if [ -n "$cur" ]; then
+            tmux set-option -t "$CLAUDE_DASH_SESSION" @zen_main "$cur"
+        else
+            tmux set-option -u -t "$CLAUDE_DASH_SESSION" @zen_main 2>/dev/null || true
+        fi
+    fi
+
+    [ -z "$cur" ] && return 0
+
+    # Unzoom first if already zoomed (so select-pane + re-zoom lands on the right pane)
+    local zoomed
+    zoomed=$(tmux display-message -t "$target" -p '#{window_zoomed_flag}' 2>/dev/null)
+    [ "$zoomed" = "1" ] && tmux resize-pane -Z -t "$target" 2>/dev/null
+
+    tmux select-pane -t "$cur" 2>/dev/null
+    tmux resize-pane -Z -t "$cur" 2>/dev/null
+
+    } 9>"$CLAUDE_DASH_LOCKFILE"
+}
+
+# --- dash_view_apply ---
+# Dispatch to dash_relayout (normal view) or dash_zen_render (zen view)
+# based on the @view session option (default: normal).
+dash_view_apply() {
+    local view
+    view=$(tmux show-options -t "$CLAUDE_DASH_SESSION" -v @view 2>/dev/null || true)
+    if [ "$view" = "zen" ]; then
+        dash_zen_render
+    else
+        dash_relayout
+    fi
+}
 
 # --- dash_ensure_session ---
 # Create the claude-dash session with 3 header panes if it doesn't exist.
@@ -195,10 +367,18 @@ dash_move_task() {
     # Update column metadata
     tmux set-option -p -t "$pane_id" @column "$new_column"
 
-    dash_relayout
+    # Update zen stacks then dispatch to the active view renderer
+    _dash_stacks_update "$pane_id" "$new_column"
+    dash_view_apply
 
-    # Restore focus and zoom (join-pane + relayout clear both)
-    [ -n "$active_pane" ] && tmux select-pane -t "$active_pane" 2>/dev/null
-    [ -n "$zoomed_pane" ] && tmux resize-pane -Z -t "$zoomed_pane" 2>/dev/null
+    # Restore focus and zoom (join-pane + relayout clear both).
+    # In zen mode, dash_zen_render already set the correct focus+zoom; restoring
+    # here would toggle-unzoom the window, so skip the block entirely.
+    local _cur_view
+    _cur_view=$(tmux show-options -t "$CLAUDE_DASH_SESSION" -v @view 2>/dev/null || true)
+    if [ "$_cur_view" != "zen" ]; then
+        [ -n "$active_pane" ] && tmux select-pane -t "$active_pane" 2>/dev/null
+        [ -n "$zoomed_pane" ] && tmux resize-pane -Z -t "$zoomed_pane" 2>/dev/null
+    fi
     return 0
 }
