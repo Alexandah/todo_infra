@@ -64,6 +64,20 @@ if [[ "$model_choice" != "haiku" ]]; then
     effort_choice="$STDOUT"
 fi
 
+# ── Context files (file browser dialog) ──────────────────────────────────────
+echo ""
+echo "Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
+if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
+    sleep 2
+    ranger "$TASKDIR" || true
+else
+    lf \
+        -command 'set promptfmt "Add relevant files/symlinks to the taskdir for reference. Press '"'"'q'"'"' when done. \033[34;1m%d\033[0m\033[1m%f\033[0m"' \
+        -command 'set ratios 2:3' \
+        "$TASKDIR" || true
+fi
+echo ""
+
 # ── Planning mode ────────────────────────────────────────────────────────────
 # 06-24-26      Seems redundant with new /taskflow skill, which systematically requires each taskdir to enter plan mode, and since we always use automode
 #               So setting to always be automode for now
