@@ -56,8 +56,4 @@ cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1 && exec $CLAUDE_BIN $escaped_
 # Create new pane in the running column
 dash_add_task running "$pane_name" "$cmd"
 
-# If interactive (tty), attach to the dashboard session
-if [ -t 0 ]; then
-    exec tmux attach-session -t "$CLAUDE_DASH_SESSION"
-fi
-# Otherwise (auto-triggered), exit silently — pane runs detached
+# Exit silently — pane runs detached in dashboard
