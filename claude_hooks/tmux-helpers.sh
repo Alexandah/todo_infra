@@ -91,9 +91,48 @@ _dash_stacks_update() {
     esac
 }
 
+# --- _dash_zen_seed_stacks ---
+# Self-healing: on Zen enter, scan all live panes and append any perms/done
+# pane that is missing from its respective stack file. Skips headers and
+# placeholders. Preserves existing stack order (checks membership before push).
+# Must be called BEFORE dash_zen_render (so no relayout lock is held).
+# Usage: _dash_zen_seed_stacks
+_dash_zen_seed_stacks() {
+    local pane_list
+    pane_list=$(tmux list-panes -s -t "$CLAUDE_DASH_SESSION" \
+        -F '#{pane_id} #{@column} #{@header} #{@zen_placeholder}' 2>/dev/null || true)
+
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local id col hdr ph
+        id=$(printf '%s' "$line" | awk '{print $1}')
+        col=$(printf '%s' "$line" | awk '{print $2}')
+        hdr=$(printf '%s' "$line" | awk '{print $3}')
+        ph=$(printf '%s' "$line" | awk '{print $4}')
+
+        # Skip header panes and placeholder panes
+        [ "$hdr" = "1" ] && continue
+        [ "$ph"  = "1" ] && continue
+
+        case "$col" in
+            perms)
+                # Only append if not already present (preserve existing order)
+                if ! grep -Fxq "$id" "$CLAUDE_DASH_PERMS_STACK" 2>/dev/null; then
+                    _dash_stack_push "$CLAUDE_DASH_PERMS_STACK" "$id"
+                fi
+                ;;
+            done)
+                if ! grep -Fxq "$id" "$CLAUDE_DASH_DONE_STACK" 2>/dev/null; then
+                    _dash_stack_push "$CLAUDE_DASH_DONE_STACK" "$id"
+                fi
+                ;;
+        esac
+    done <<< "$pane_list"
+}
+
 # --- _dash_zen_valid ---
 # Returns 0 iff pane_id is non-empty, live, in perms or done column,
-# and does NOT have @zen_placeholder == 1.
+# is NOT a header pane (@header == 1), and does NOT have @zen_placeholder == 1.
 # Usage: _dash_zen_valid <pane_id>
 _dash_zen_valid() {
     local pane_id="$1"
@@ -108,6 +147,10 @@ _dash_zen_valid() {
         perms|done) ;;
         *) return 1 ;;
     esac
+    # Reject header panes
+    local hdr
+    hdr=$(tmux show-options -p -t "$pane_id" -v @header 2>/dev/null)
+    [ "$hdr" = "1" ] && return 1
     # Reject placeholder panes
     local placeholder
     placeholder=$(tmux show-options -p -t "$pane_id" -v @zen_placeholder 2>/dev/null)

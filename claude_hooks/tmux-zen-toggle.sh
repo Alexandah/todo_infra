@@ -30,6 +30,10 @@ _ZEN_TOGGLE_LOCK=/tmp/claude-dash-zen-toggle.lock
         tmux set-option -p -t "$placeholder" @zen_placeholder 1
         tmux set-option -t "$CLAUDE_DASH_SESSION" @zen_placeholder_pane "$placeholder"
 
+        # Reconcile stacks from live pane state before render (self-healing:
+        # catches panes that transitioned before stack-tracking was installed).
+        _dash_zen_seed_stacks
+
         dash_zen_render
     else
         # --- EXIT ZEN ---
