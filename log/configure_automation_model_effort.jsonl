@@ -1,0 +1,4 @@
+{"task":"Test taskdir to validate configuration automation refactoring", "model": "sonnet", "effort": "low", "is_default":"false"}
+{"task":"Testing auto-launch of claude taskdir tmux post-config acceptance", "model": "sonnet", "effort": "low", "is_default":"false"}
+{"task":"Testing updated configure automation flow to confirm auto-launch of taskdirs post-acceptance of init task spec", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Testing if taskdir tmux autolaunches after configure automation finishes", "model": "sonnet", "effort": "high", "is_default":"true"}
