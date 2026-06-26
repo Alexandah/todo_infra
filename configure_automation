@@ -1,9 +1,8 @@
 #!/bin/bash
 # configure_automation — Interactive Claude taskdir configuration wizard
-# Walks the user through model/effort/mode choices, produces a configured
-# _claude.do (which tells Claude to run the taskflow skill, which derives
-# acceptance criteria on task start), then
-# self-deletes.
+# Chooses model & effort based on user-selected task difficulty, Walks thru task specification,
+# produces a configured _claude.do (which tells Claude to run the taskflow skill, which derives
+# acceptance criteria on task start), then self-deletes.
 set -e
 
 TASKDIR=$(dirname $(realpath "$0"))
@@ -22,118 +21,84 @@ goal=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ')
 time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
 deadline=$(basename "$TASKDIR"/:by_* 2>/dev/null | sed 's/^:by_//' | tr '_' ' ')
 
-# ── QA-gate the task spec ──────────────────────────────────────
-echo "[Prompt QA]"
-# Force task spec if .hmm is empty
-while [ -n "$goal_file" ] && [ ! -s "$goal_file" ]; do
-    echo "Goal file is empty — opening in hmm. Add some details and save to spec the task."
-    sleep 2
-    hmm "$goal_file"
-done
-# configure_automation self-deletes after one run, so this is the moment to enforce a usable spec.
-# prompt_gate loops the user through hmm until the spec passes
-# prompt_qa_policy.md — it never autocorrects (the human sharpens the goal).
-# Ctrl-C aborts the wizard; prompt_gate's trap leaves the .hmm clean.
-if [ -n "$goal_file" ]; then
-    PROMPT_QA_POLICY="$INFRA/prompt_qa_policy.md" "$INFRA/prompt_gate" --file "$goal_file" --editor hmm
+
+# ── Task Difficulty ────────────────────────────────────────────────────────────────────
+crash_if_nonzero_exit \
+    'printf "medium\neasy\nhard\nDEATH" | fzf --prompt="TASK DIFFICULTY > " \
+        --header="Estimate task difficulty-- picks model + effort" '"$fzf_gap_arg"
+task_difficulty="$STDOUT"
+
+if [ "$task_difficulty" = "easy" ]; then
+    model_choice="sonnet"
+    effort_choice="low"
+    not_easy=0
+    chose_default_option=false
+elif [ "$task_difficulty" = "medium" ]; then
+    model_choice="sonnet"
+    effort_choice="high"
+    not_easy=1
+    chose_default_option=true
+elif [ "$task_difficulty" = "hard" ]; then
+    model_choice="opus"
+    effort_choice="medium"
+    not_easy=1
+    chose_default_option=false
+elif [ "$task_difficulty" = "DEATH" ]; then
+    model_choice="opus"
+    effort_choice="max"
+    not_easy=1
+    chose_default_option=false
 else
-    echo "[Prompt QA] ERROR -- No <goal>.hmm file found!"
-    sleep 2
+    echo "ERROR: Unrecognized task difficulty"
     exit 1
 fi
 
-echo ""
-echo "=== Claude Taskdir Configuration ==="
-echo "  Task: $goal"
-[ -n "$time_est" ] && echo "  Time: $time_est"
-[ -n "$deadline" ] && echo "  Due:  $deadline"
-echo ""
 
-# ── Model ────────────────────────────────────────────────────────────────────
-crash_if_nonzero_exit \
-    'printf "sonnet\nopus\nhaiku" | fzf --prompt="MODEL > " \
-        --header="Select Claude model" '"$fzf_gap_arg"
-model_choice="$STDOUT"
+# ── Detailed task specification enforced for non-trivial tasks ──────────────────────────────────────
+if [ "$not_easy" -eq 1 ]; then
+    # ── Context files (file browser dialog) ──────────────────────────────────────
+    echo ""
+    echo "Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
+    if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
+        sleep 2
+        ranger "$TASKDIR" || true
+    else
+        lf \
+            -command 'set promptfmt "Add relevant files/symlinks to the taskdir for reference. Press '"'"'q'"'"' when done. \033[34;1m%d\033[0m\033[1m%f\033[0m"' \
+            -command 'set ratios 2:3' \
+            "$TASKDIR" || true
+    fi
+    echo ""
 
-# ── Effort (not supported by haiku) ──────────────────────────────────────────
-effort_choice=""
-if [[ "$model_choice" != "haiku" ]]; then
-    crash_if_nonzero_exit \
-        'printf "medium\nlow\nhigh\nmax\nultracode" | fzf --prompt="EFFORT > " \
-            --header="Effort level (affects depth of reasoning)" '"$fzf_gap_arg"
-    effort_choice="$STDOUT"
+    # ── QA-gate the task spec ──────────────────────────────────────
+    echo "[Prompt QA]"
+    # Force task spec if .hmm is empty
+    while [ -n "$goal_file" ] && [ ! -s "$goal_file" ]; do
+        echo "Goal file is empty — opening in hmm. Add some details and save to spec the task."
+        sleep 2
+        hmm "$goal_file"
+    done
+    # configure_automation self-deletes after one run, so this is the moment to enforce a usable spec.
+    # prompt_gate loops the user through hmm until the spec passes
+    # prompt_qa_policy.md — it never autocorrects (the human sharpens the goal).
+    # Ctrl-C aborts the wizard; prompt_gate's trap leaves the .hmm clean.
+    if [ -n "$goal_file" ]; then
+        PROMPT_QA_POLICY="$INFRA/prompt_qa_policy.md" "$INFRA/prompt_gate" --file "$goal_file" --editor hmm
+    else
+        echo "[Prompt QA] ERROR -- No <goal>.hmm file found!"
+        sleep 2
+        exit 1
+    fi
 fi
 
-# ── Context files (file browser dialog) ──────────────────────────────────────
-echo ""
-echo "Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
-if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
-    sleep 2
-    ranger "$TASKDIR" || true
-else
-    lf \
-        -command 'set promptfmt "Add relevant files/symlinks to the taskdir for reference. Press '"'"'q'"'"' when done. \033[34;1m%d\033[0m\033[1m%f\033[0m"' \
-        -command 'set ratios 2:3' \
-        "$TASKDIR" || true
-fi
-echo ""
 
-# ── Planning mode ────────────────────────────────────────────────────────────
-# 06-24-26      Seems redundant with new /taskflow skill, which systematically requires each taskdir to enter plan mode, and since we always use automode
-#               So setting to always be automode for now
+# ── Permission mode ────────────────────────────────────────────────────────────
 perm_mode="auto"
-#crash_if_nonzero_exit \
-#    'printf "no — act immediately (default)\nyes — plan before acting" | fzf \
-#        --prompt="PLAN MODE > " \
-#        --header="Plan mode: Claude proposes a plan and waits for approval" '"$fzf_gap_arg"
-#planning_raw="$STDOUT"
-#if [[ "$planning_raw" == yes* ]]; then
-#    perm_mode="plan"
-#else
-#    # ── Permission mode (only asked when not in plan mode) ────────────────────
-#    crash_if_nonzero_exit \
-#        'printf "default — prompt for each tool\nauto — auto-accept edits" | fzf \
-#            --prompt="PERMISSION MODE > " \
-#            --header="auto: minimal friction; default: confirm every tool use" '"$fzf_gap_arg"
-#    perm_raw="$STDOUT"
-#    if [[ "$perm_raw" == auto* ]]; then
-#        perm_mode="auto"
-#    else
-#        perm_mode="default"
-#    fi
-#fi
 
-# ── settings.local.json ───────────────────────────────────────────────────────
-# 05-27-26		I have never used this, commenting out for now
-#crash_if_nonzero_exit \
-#    'printf "no — skip\nyes — configure settings.local.json" | fzf \
-#        --prompt="SETTINGS.LOCAL.JSON > " \
-#        --header="Configure per-taskdir Claude Code settings (allowed tools, etc.)" '"$fzf_gap_arg"
-#settings_choice="$STDOUT"
-#
-#if [[ "$settings_choice" == yes* ]]; then
-#    echo ""
-#    echo "--- Launching Claude to configure settings.local.json ---"
-#    echo "(Exit the Claude session when done; the wizard will resume.)"
-#    echo ""
-#    (
-#        cd /tmp
-#        mkdir -p "$TASKDIR/.claude"
-#        $CLAUDE_BIN --permission-mode auto \
-#		--add-dir "$TASKDIR" \
-#		-- \
-#"You are helping configure .claude/settings.local.json for a Claude Code taskdir session.
-#
-#Common settings to offer:
-#- allowedTools: pre-approve specific Bash commands or tool patterns so Claude doesn't prompt for them (e.g., allow 'Bash(git:*)' or 'Bash(npm:*)')
-#- Allowing writes or reads outside the taskdir
-#
-#Make suggestions based on the task for what to configure and ask me what I think, then write (or update) the file .claude/settings.local.json accordingly. When done, say 'Done — settings.local.json configured.' and stop."
-#    )
-#    echo ""
-#    echo "--- Returned to configuration wizard ---"
-#    echo ""
-#fi
+
+# ── Log configuration choices for empirical analysis ───────────────────────────────────────────
+echo '{"task":"'$goal'", "model": "'$model_choice'", "effort": "'$effort_choice'", "is_default":"'$chose_default_option'"}' >> "$INFRA"/log/configure_automation_model_effort.jsonl
+
 
 # ── Generate configured _claude.do ───────────────────────────────────────────
 echo "=== Configuration Summary ==="
@@ -182,7 +147,7 @@ fi
 
 msg="\$msg
 
-This taskdir runs under the taskflow automation flow. Even in plan mode, your FIRST action MUST be to invoke the taskflow skill (or type /taskflow) — do NOT fall into the generic plan-mode workflow instead. It orchestrates Explore -> Define Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents. Trivial taskdirs collapse to an inline path.
+This taskdir runs under the taskflow automation flow. Even in plan mode, your FIRST action MUST be to invoke the taskflow skill (or type /taskflow) — do NOT fall into the generic plan-mode workflow instead. It orchestrates Explore -> Define Criteria -> Plan -> Implement -> Validate -> Finalize with interactive gates, delegating heavy work to subagents.
 
 INVOKE SKILL: /taskflow"
 
@@ -191,22 +156,20 @@ TEMPLATE
 chmod +x "$TASKDIR/_claude.do"
 echo "Generated _claude.do  (--model $model_choice --effort $effort_choice --permission-mode $perm_mode)"
 
-# ── Signal file ───────────────────────────────────────────────────────────────
-#crash_if_nonzero_exit \
-#    'printf "no\nyes — mark as ready for auto-pickup" | fzf \
-#        --prompt="SIGNAL FILE > " \
-#        --header="Creates ;claude_plz_do_this (chmod +x) immediately after configuration completes" '"$fzf_gap_arg"
-#signal_choice="$STDOUT"
-#
-#if [[ "$signal_choice" == yes* ]]; then
-#    touch "$TASKDIR/;claude_plz_do_this"
-#    chmod +x "$TASKDIR/;claude_plz_do_this"
-#    echo "Signal file created → ;claude_plz_do_this"
-#fi
 
+# ── Launching Claude ───────────────────────────────────────────────────────────────
 echo ""
-echo "Configuration complete. Run ./_claude.do to launch Claude for this task."
+echo "Configuration complete. Running ./_claude.do to launch Claude for this task.."
+pushd "$TASKDIR"
+    timestamp=$(date '+%D_%T' | tr '/' '-')
+    ./_claude.do
+    launch_record=";claude_launched_@_$timestamp"
+    ln --symbolic _claude.do "$launch_record"
+popd
+echo "Claude launched! Press ';' in lf/ranger to open the claude-taskdir-tmux dashboard & monitor task progress."
 echo ""
+sleep 2
+
 
 # ── Self-delete ───────────────────────────────────────────────────────────────
 rm "$0"

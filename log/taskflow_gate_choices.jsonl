@@ -23,3 +23,19 @@
 {"task":"Help_test_the_new_taskdir-dashboard_Zen_mode_w_this_dummy_taskdir_claude_run_I","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
 {"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"D","phase":"Validate (live retest)","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
 {"task":"taskdir_claude_dashboard:_Zen_view_mode","gate":"E","phase":"Finalize","options":["Commit, no push","Squash into first","Commit + push","Don't commit"],"chosen":"Commit, no push","is_default":true}
+{"task":"tweak--taskdir_claude.do","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"feature--configure_automation","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"tweak--taskdir_claude.do","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"feature--configure_automation","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Prompt says: Add relevant files/symlinks to the taskdir for reference. Press q when done.","is_default":false}
+{"task":"tweak--taskdir_claude.do","gate":"B","phase":"Plan","options":["Approved","Rejected","Edited"],"chosen":"Approved","is_default":true}
+{"task":"feature--configure_automation","gate":"B","phase":"Plan","options":["Approve","Edit","Reject"],"chosen":"Approved","is_default":true}
+{"task":"tweak--taskdir_claude.do","gate":"D","phase":"Validate","options":["Accept — I'll test live","Be stricter","Reject"],"chosen":"Accept — I'll test live","is_default":true}
+{"task":"tweak--taskdir_claude.do","gate":"E","phase":"Finalize","options":["Commit, no push","Don't commit"],"chosen":"commit + push","is_default":false}
+{"task":"feature--configure_automation","gate":"D","phase":"Validate","options":["Accept","Reject"],"chosen":"Accept","is_default":true}
+{"task":"feature--configure_automation","gate":"E","phase":"Finalize","options":["Yes, commit","No"],"chosen":"Yes, commit","is_default":true}
+{"task":"Testing_auto-launch_of_claude_taskdir_tmux_post-config_acceptance","gate":"A","phase":"Explore","options":["Proceed — just validate the launch worked","Reframe — there is more to test","Out of scope"],"chosen":"Proceed — just validate the launch worked","is_default":true}
+{"task":"Testing_updated_configure_automation_flow_to_confirm_auto-launch_of_taskdirs_post-acceptance_of_init_task_spec","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}

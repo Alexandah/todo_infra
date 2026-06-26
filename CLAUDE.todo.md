@@ -88,3 +88,6 @@ exist and ask before touching anything outside the taskdir.
 - `done/` — completed
 - `maybe/` — uncertain/non-actionable
 - `wait/<reason>/<taskdir>/` — blocked tasks, organized by what they're waiting for (e.g., `wait/signed_up_for_credit_card/Do_X/`)
+
+## Infrastructure
+.infra/* contains the scripts providing key functionality for the todo-system
