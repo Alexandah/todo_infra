@@ -84,7 +84,7 @@ subprocess.run(["timer", "-m", "10"])
 
 tee_print("ii. Translate any left-over iPhone todo reminders, recurring thoughts, unread messages, hand-written notes, etc, into inputs for todo system.")
 time.sleep(3)
-run_lf("Press T to create a taskdir for any left-over iPhone todos, recurring thoughts, unread messages, hand-written notes, etc.", Path.home() / "main/todo")
+run_lf("Press T to create a taskdir for any left-over iPhone todos, recurring thoughts, unread messages, hand-written notes, etc.", Path.home() / "main/todo/new")
 
 tee_print("iii. Update the timestamp for any people under ../relationships/* interacted with this week.")
 time.sleep(3)
@@ -134,7 +134,6 @@ tee_print("ii. Write 2 sentences analyzing why progress was good/mediocre/bad to
 postmortem_of_progress = ask("    2 SENTENCES> ")
 
 tee_print("iii. Write 1-3 sentence list of insights to keep in mind this week, so as to improve our efforts.")
-insights_on_goals = ask("    3 SENTENCES> ")
 capture_actions()
 tee_print()
 
@@ -157,7 +156,6 @@ tee_print("iii. Write 2 sentences evaluating the results, trying to explain what
 postmortem_of_difficult_habits = ask("    2 SENTENCES> ")
 
 tee_print("iv. Write 1-3 sentence list of actions to resolve the encountered difficulties with compliance.")
-actions_to_improve_habit_compliance = ask("    3 SENTENCES> ")
 capture_actions()
 tee_print()
 
@@ -166,37 +164,36 @@ tee_print("3. Post-Mortem of Agreements")
 tee_print("i. Recall for 3m: How well did I adhere to my agreements this week?")
 subprocess.run(["timer", "-m", "3"])
 
-tee_print("ii. Read aloud from the Constitution's articles: ONLY the numbered lines")
-time.sleep(3)
-constitution = Path.home() / "main/agreements/A1:Constitution_for_the_Sovereignty_of_Alexander"
-with open(constitution) as f:
-    numbered_lines = [line for line in f if line.strip() and line.lstrip()[0].isdigit() and "." in line.split()[0]]
-subprocess.run(["less"], input="".join(numbered_lines), text=True)
+#tee_print("ii. Read aloud from the Constitution's articles: ONLY the numbered lines")
+#time.sleep(3)
+#constitution = Path.home() / "main/agreements/A1:Constitution_for_the_Sovereignty_of_Alexander"
+#with open(constitution) as f:
+#    numbered_lines = [line for line in f if line.strip() and line.lstrip()[0].isdigit() and "." in line.split()[0]]
+#subprocess.run(["less"], input="".join(numbered_lines), text=True)
 
-tee_print("iii. Skim the rest of my agreements, relating them to my recent efforts.")
+tee_print("ii. Skim my agreements, relating them to my recent efforts.")
 time.sleep(3)
 agreements_for_further_focus = run_lf_select(
-    "Skim your agreements, considering how they relate to my efforts. Mark any A3s to review for upgrade/revision, or any others for further focus, Press ENTER to confirm selection.",
+    "Skim your agreements, considering how they relate to my efforts. Mark any to revise or for further focus, Press ENTER to confirm selection.",
     Path.home() / "main/agreements"
 )
 tee_print("Agreements -- for further focus:")
 tee_print(indent("\n".join(agreements_for_further_focus)))
 time.sleep(1)
 
-tee_print("iv. Write 3 sentences evaluating my compliance.")
+tee_print("iii. Write 3 sentences evaluating my compliance.")
 postmortem_of_agreement_compliance = ask("    3 SENTENCES> ")
 
-tee_print("v. Write list of 1-3 actions to take in light of the evaluation, so as to curate & adhere to realistic & just agreements.")
-actions_to_improve_agreement_compliance = ask("    3 SENTENCES> ")
+tee_print("iv. Write list of 1-3 actions to take in light of the evaluation, so as to curate & adhere to realistic & just agreements.")
 capture_actions()
 tee_print()
 
 # OKR Weekly Check
-tee_print("OKR Weekly Check")
-result = subprocess.run([str(HERE / "okr_check")])
-if result.returncode != 0:
-    tee_print("(okr_check skipped or no OKRs found)")
-tee_print()
+#tee_print("OKR Weekly Check")
+#result = subprocess.run([str(HERE / "okr_check")])
+#if result.returncode != 0:
+#    tee_print("(okr_check skipped or no OKRs found)")
+#tee_print()
 
 # 4. Time-estimation of Allocatable Work
 QUOTA_DAILY_WORK_HOURS = 1.5
@@ -232,17 +229,17 @@ time.sleep(1)
 tee_print()
 
 # 5. Review of Domains
-tee_print("5. Review of Domains")
-tee_print("i. Skim the domains-of-concern, identify those relevant to planning for this week.")
-time.sleep(3)
-relevant_domains_of_concern = run_lf_select(
-    "Mark domains relevant to planning for this week, Press Enter to confirm selection.",
-    TODO_ROOT / "#domain"
-)
-tee_print("Domains of Concern -- the weekly plan must account for:")
-tee_print(indent("\n".join(relevant_domains_of_concern)))
-time.sleep(1)
-tee_print()
+#tee_print("5. Review of Domains")
+#tee_print("i. Skim the domains-of-concern, identify those relevant to planning for this week.")
+#time.sleep(3)
+#relevant_domains_of_concern = run_lf_select(
+#    "Mark domains relevant to planning for this week, Press Enter to confirm selection.",
+#    TODO_ROOT / "#domain"
+#)
+#tee_print("Domains of Concern -- the weekly plan must account for:")
+#tee_print(indent("\n".join(relevant_domains_of_concern)))
+#time.sleep(1)
+#tee_print()
 
 if _out is not None:
     _out.close()
