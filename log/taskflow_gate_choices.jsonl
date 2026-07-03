@@ -39,3 +39,17 @@
 {"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Remove criterion"],"chosen":"Approve","is_default":true}
 {"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
 {"task":"Testing_if_taskdir_tmux_autolaunches_after_configure_automation_finishes","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"A","phase":"Explore","options":["Proceed","Reframe","Out of scope"],"chosen":"Proceed","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Reject","is_default":false}
+{"task":"Traige_jiras_into_groups_by_shared_cause:_RHSP7E_REGREF_01_errors","gate":"A","phase":"Explore","options":["Proceed as framed","Reframe","Out of scope"],"chosen":"Reframe","is_default":false}
+{"task":"prompt_gate:_Meta-QA","gate":"C","phase":"Define Criteria (redesign)","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"Traige_jiras_into_groups_by_shared_cause:_RHSP7E_REGREF_01_errors","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"B","phase":"Plan (redesign)","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"Traige_jiras_into_groups_by_shared_cause:_RHSP7E_REGREF_01_errors","gate":"B","phase":"Plan","options":["Approved","Edited","Rejected"],"chosen":"Approved","is_default":true}
+{"task":"prompt_gate:_Meta-QA","gate":"D","phase":"Validate (redesign)","options":["Accept","I'll test live first","Be stricter","Reject"],"chosen":"I'll test live first","is_default":false}
+{"task":"Debug_Clean-up_Stably_working_genie_Atlassian_MCP","gate":"C","phase":"Define Criteria","options":["Approve","Make stricter","Add criterion","Remove criterion"],"chosen":"Approve","is_default":true}
+{"task":"Debug_Clean-up_Stably_working_genie_Atlassian_MCP","gate":"B","phase":"Plan","options":["Approved","Rejected","Edited"],"chosen":"Approved","is_default":true}
+{"task":"Debug_Clean-up_Stably_working_genie_Atlassian_MCP","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Pending — awaiting user restart","is_default":false}
+{"task":"Debug_Clean-up_Stably_working_genie_Atlassian_MCP","gate":"D","phase":"Validate","options":["Accept","Be stricter","Reject"],"chosen":"Accept","is_default":true}

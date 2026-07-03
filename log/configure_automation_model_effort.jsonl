@@ -2,3 +2,6 @@
 {"task":"Testing auto-launch of claude taskdir tmux post-config acceptance", "model": "sonnet", "effort": "low", "is_default":"false"}
 {"task":"Testing updated configure automation flow to confirm auto-launch of taskdirs post-acceptance of init task spec", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"Testing if taskdir tmux autolaunches after configure automation finishes", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"prompt gate: Meta-QA -- User can complain about QA feedback and a meta-evaluator will revise the QA policy before next iter of object-lvl QA loop", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Traige jiras into groups by shared cause: RHSP7E REGREF 01 errors", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Debug, Clean-up, Stably working: genie Atlassian MCP server connects to Jira", "model": "sonnet", "effort": "high", "is_default":"true"}
