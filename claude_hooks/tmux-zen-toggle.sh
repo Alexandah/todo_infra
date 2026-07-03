@@ -18,13 +18,25 @@ _ZEN_TOGGLE_LOCK=/tmp/claude-dash-zen-toggle.lock
 
     if [ "$view" != "zen" ]; then
         # --- ENTER ZEN ---
-        tmux set-option -t "$CLAUDE_DASH_SESSION" @view zen
-
-        # Create placeholder pane in the dash window, same idiom as column headers.
+        # Create the placeholder pane FIRST, BEFORE touching @view or any option.
+        # Split off the TALLEST pane so the split can't fail on a 2-row header
+        # (relayout shrinks headers to 2 rows, which have no room to split).
+        src=$(tmux list-panes -t "$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW" \
+            -F '#{pane_height} #{pane_id}' 2>/dev/null | sort -rn | head -1 | awk '{print $2}')
         placeholder=$(tmux split-window \
-            -t "$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW" \
+            -t "${src:-$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW}" \
             -d -P -F '#{pane_id}' \
-            "printf '\033[7m  ZEN \xe2\x80\x94 nothing needs you right now  \033[0m\n'; sleep infinity")
+            "printf '\033[7m  ZEN \xe2\x80\x94 nothing needs you right now  \033[0m\n'; sleep infinity" 2>/dev/null)
+
+        # CRITICAL: if the split failed, $placeholder is empty. The set-option -p
+        # calls below would then run with `-t ""`, which tmux silently retargets
+        # to the ACTIVE pane (a column header) — stamping @column zen onto it and
+        # permanently breaking move-to-running. Bail with no side effects instead.
+        if [ -z "$placeholder" ]; then
+            exit 0
+        fi
+
+        tmux set-option -t "$CLAUDE_DASH_SESSION" @view zen
         tmux set-option -p -t "$placeholder" remain-on-exit on
         tmux set-option -p -t "$placeholder" @column zen
         tmux set-option -p -t "$placeholder" @zen_placeholder 1

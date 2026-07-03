@@ -17,9 +17,9 @@ last-resort tiebreaker, not a default.
 1. **Read context.** Goal note (`::*.hmm`), task title, time estimate, any
    other taskdir files (drafts, specs, prior `log.do`). Read enough of the
    surrounding repo / parent taskdirs to understand intent.
-2. **Critical-thinking pass.** Draft 1–5 concrete, verifiable criteria that
-   drill to the essential core of "done". Err on fewer. Each criterion must
-   be objectively verifiable as done or not done by *some* method (shell
+2. **Critical-thinking pass.** Draft a list of 1-sentence-each, simply-worded, concrete,
+   verifiable criteria that drill to the essential core of "done". Err on fewer.
+   Each criterion must be objectively verifiable as done or not done by *some* method (shell
    check, file inspection, behavioral observation, judgment call).
 3. **Self-resolve ambiguity.** If something seems ambiguous, try to resolve
    it from context before asking. The user picked this task because they
@@ -28,7 +28,7 @@ last-resort tiebreaker, not a default.
    from context (load-bearing user-specific preference, domain knowledge you
    lack, or two equally-valid framings), use `AskUserQuestion`. Batch
    questions; don't drip them.
-5. **Persist criteria.** Write the 1–5 criteria to `acceptance_criteria.md` in
+5. **Persist criteria.** Write the criteria to `acceptance_criteria.md` in
    the taskdir — plain markdown, one criterion per item, each a verifiable
    property. No executable scaffold, no checks, no `chmod`. This file is the
    north-star record the rest of the flow reads and passes to `/goal`.
@@ -51,6 +51,8 @@ last-resort tiebreaker, not a default.
 - Asking The User before doing the critical-thinking pass.
 - Spending too much time investigating something that is best answered by The User.
 - Generating boilerplate criteria that match the task title without engaging with specifics.
-- Producing >5 criteria — split the task or drill into the essence.
+- Producing too many criteria — drill into the essence.
+- Trying to include all the bells & whistles — split keep it simple.
+- Criterion longer than 1 sentence.
 - Writing deterministic checks / a `validate.do` — the flow judges criteria via
   `/goal`, not a check script.

@@ -81,7 +81,7 @@ evaluate() {
     err "Evaluating prompt against policy…"
     policy="$(cat "$POLICY_FILE")"
     local claude_runtime_limiting_args="--effort ${GATE_EFFORT:-low} --max-budget-usd 0.4 --max-turns 13"
-    local judge_prompt="You are a strict prompt-QA referee. Judge the prompt below against the policy. This is a fast intuitive gut-check, NOT a legal brief — follow the policy's spirit, decide quickly, do not overthink or deliberate at length. We must keep the machine-to-user feedback loop tight, so don't keep them waiting. Here are the args enforcing runtime restrictions passed into this Claude Code call: $claude_runtime_limiting_args 
+    local judge_prompt="You are a strict prompt-QA referee. Judge the prompt below against the policy. This is a fast intuitive gut-check, NOT a legal brief — follow the policy's spirit, decide quickly, do not overthink or deliberate at length. We must keep the machine-to-user feedback loop tight, so don't keep them waiting. Here are the args enforcing runtime restrictions passed into this Claude Code call: $claude_runtime_limiting_args
     Emit a JSON object matching the provided schema: verdict in {PASS,FAIL}; reason is ONE plain sentence. On FAIL, name the single biggest gap per the policy's verdict rules. Never rewrite or correct the prompt.
 
 ===== POLICY =====
@@ -105,7 +105,10 @@ ${user_prompt}
     reason=$(jq -r '.structured_output.reason // empty' <<<"$out")
     [ "$verdict" = "PASS" ] || [ "$verdict" = "FAIL" ] || return 1
     [ -n "$reason" ] || return 1
-    printf '%s\t%s\n' "$verdict" "$reason"
+    local verdict_clean reason_clean
+    verdict_clean="${verdict//$'\t'/ }"; verdict_clean="${verdict_clean//$'\n'/ }"
+    reason_clean="${reason//$'\t'/ }"; reason_clean="${reason_clean//$'\n'/ }"
+    printf '%s\t%s\n' "$verdict_clean" "$reason_clean"
 }
 
 # judge_once <text>: PASS -> print verbatim to stdout, exit 0; FAIL -> exit 2.
@@ -113,18 +116,46 @@ judge_once() {
     local prompt="$1" res verdict reason
     [ -n "${prompt//[[:space:]]/}" ] || die "empty prompt"
     res="$(evaluate "$prompt")" || die "judge invocation failed"
-    verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+    IFS=$'\t' read -r verdict reason <<<"$res"
     if [ "$verdict" = "PASS" ]; then
         err "PASS"; printf '%s' "$prompt"; exit 0
     fi
     err "FAIL: $reason"; exit 2
 }
 
-# strip_qa <file>: remove #QA# annotation lines in place.
+# extract_meta <file>: prints the user's complaint lines (non-#QA# descendants
+# under the #QA# node, dedented), or nothing if absent.
+extract_meta() {
+    awk '
+        function ind(s,   n){ n=0; while (substr(s, n+1, 1) == "\t") n++; return n }
+        {
+            if ($0 ~ /^[[:space:]]*#QA#/) { q = ind($0); inq = 1; next }
+            if (inq && $0 ~ /^[[:space:]]*$/) { next }
+            if (inq) {
+                if (ind($0) > q) { line = $0; sub(/^\t+/, "", line); print line; next }
+                else { inq = 0 }
+            }
+        }
+    ' "$1"
+}
+
+# strip_qa <file>: remove the whole #QA# subtree (every #QA# line AND any
+# deeper-indented descendant lines within that block) in place.
 strip_qa() {
     local f="$1" t
     t="$(mktemp)" || return 1
-    grep -vE "$QA_RE" "$f" > "$t" 2>/dev/null
+    awk '
+        function ind(s,   n){ n=0; while (substr(s, n+1, 1) == "\t") n++; return n }
+        {
+            if ($0 ~ /^[[:space:]]*#QA#/) { q = ind($0); inq = 1; next }
+            if (inq && $0 ~ /^[[:space:]]*$/) { next }
+            if (inq) {
+                if (ind($0) > q) { next }
+                else { inq = 0 }
+            }
+            print
+        }
+    ' "$f" > "$t" 2>/dev/null
     mv "$t" "$f"
 }
 
@@ -136,26 +167,52 @@ inject_qa() {
     {
         head -n 1 "$f"
         printf '\t#QA# FAIL: %s\n' "$reason"
+        printf '\t#QA# To DISPUTE the QA policy itself (rather than revise the spec), write your complaint as TAB-indented line(s) directly below this, then save & re-check.\n'
         tail -n +2 "$f"
     } > "$t"
     mv "$t" "$f"
 }
 
+# run_meta_qa <complaint>: launch an interactive Claude session to
+# revise POLICY_FILE in place based on the user's complaint text.
+run_meta_qa() {
+    local complaint="$1"
+    assemble_md_ctx
+    local meta_prompt="The user is complaining about the prompt-QA policy that gates their task specs.
+
+Their complaint:
+${complaint}
+
+The policy file is: ${POLICY_FILE}
+
+Please read that policy file, then revise it IN PLACE to address the user's feedback while preserving the policy's overall structure and intent. The user is watching this session and may offer additional guidance. When they are satisfied with the revised policy, they will exit this session (Ctrl-D or /exit)."
+    err "Meta-QA: launching interactive policy-revision session…"
+    "$CLAUDE_BIN" --model "$MODEL" --append-system-prompt "$MD_CTX" "$meta_prompt" \
+        </dev/tty >/dev/tty 2>/dev/tty || err "Meta-QA: session exited nonzero (ignored)"
+    err "Meta-QA: policy revision session ended; resuming QA."
+}
+
 # gate_file <file> <editor>: judge-first in-place loop. Only opens the editor on
 # FAIL. Leaves the file free of #QA# lines on any exit (trap). No bypass.
 gate_file() {
-    local file="$1" editor="$2" spec res verdict reason
+    local file="$1" editor="$2" spec res verdict reason meta
     [ -f "$file" ] || die "file not found: $file"
     GATE_CTX_DIR="$(cd "$(dirname "$file")" && pwd)"   # CLAUDE.md hierarchy root
     trap 'strip_qa "$file" 2>/dev/null' EXIT
     while :; do
+        meta="$(extract_meta "$file")"
+        if [ -n "${meta//[[:space:]]/}" ]; then
+            run_meta_qa "$meta"
+            strip_qa "$file"        # removes the whole #QA subtree incl. the complaint
+            continue
+        fi
         strip_qa "$file"
         spec="$(cat "$file")"
         if [ -z "${spec//[[:space:]]/}" ]; then
             reason="Spec is empty — state the goal with enough context, action, and desired result to act on."
         else
             res="$(evaluate "$spec")" || die "judge invocation failed"
-            verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+            IFS=$'\t' read -r verdict reason <<<"$res"
             if [ "$verdict" = "PASS" ]; then
                 err "PASS"; trap - EXIT; strip_qa "$file"; exit 0
             fi
@@ -163,7 +220,6 @@ gate_file() {
         err "FAIL: $reason"
         inject_qa "$file" "$reason"
         "$editor" "$file" </dev/tty >/dev/tty 2>/dev/tty || die "editor exited nonzero"
-        strip_qa "$file"
     done
 }
 
@@ -232,7 +288,7 @@ while :; do
         err "judge invocation failed; reopening editor"
         seed_buffer "judge invocation failed — try resubmitting" "$prompt"; continue
     fi
-    verdict="${res%%$'\t'*}"; reason="${res#*$'\t'}"
+    IFS=$'\t' read -r verdict reason <<<"$res"
     if [ "$verdict" = "PASS" ]; then
         err "PASS"; printf '%s' "$prompt"; sleep 2; exit 0
     fi

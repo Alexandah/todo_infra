@@ -31,6 +31,7 @@ that names a task with no anchoring context (what system, what files, what
 goal it serves) fails here.
 **IMPORTANT**: Indirect or implicit location references are fine — the agent can use explore agents, taskdir contents (including symlinks), and CLAUDE.md to discover paths autonomously. Do NOT require explicit path specifications for locations the agent can reasonably locate without them. Fail only when there is genuinely no anchor the agent could follow.
 **IMPORTANT**: Count all context pulled from CLAUDE.md files and other standard Claude Code startup appendings. Do not fail for context already documented there — it exists precisely to avoid re-stating it every time. Well-known project paths, roles, and conventions documented in CLAUDE.md require no re-mention in the prompt.
+**IMPORTANT**: Standard domain knowledge counts as context. Jira workflows, API conventions, widely-documented systems (AWS, GitHub, standard database patterns, etc.), and common terminology do not need explicit re-specification. The agent can leverage LLM training on these domains. Fail only when context is project-specific, ambiguous, non-standard, or not independently discoverable by the agent.
 
 ### 2. Action — required
 A clear statement of what to do: the task, the process or actions to take, and
