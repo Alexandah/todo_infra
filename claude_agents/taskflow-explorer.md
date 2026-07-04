@@ -13,7 +13,13 @@ never edit, write, or mutate anything.
 Do:
 1. Read the goal note (`::*.hmm`) in the taskdir, plus the `:time=*` / `:by_*`
    metadata filenames.
-2. List the taskdir contents; read any drafts / specs / prior `log.do`.
+2. List the taskdir contents, including hidden entries and symlinks (`Glob`
+   with patterns like `*` and `.*` — don't assume a plain listing surfaces
+   everything); read any drafts / specs / prior `log.do`. Symlinked files/dirs
+   are present content to read, not to skip — `Read` follows symlinks
+   transparently, so before ever reporting a referenced file as MISSING,
+   `Glob` for its exact name in the dir and, if found, `Read` it (a symlink
+   entry counts as present, even if its target lives outside the taskdir).
 3. Read just enough surrounding context (parent taskdirs, relevant files, referenced repos) 
    to understand intent — excerpts, not whole files.
 4. Perform web searches if URLs are referenced or the task implies a need for external info.
