@@ -6,3 +6,5 @@
 {"task":"Traige jiras into groups by shared cause: RHSP7E REGREF 01 errors", "model": "opus", "effort": "medium", "is_default":"false"}
 {"task":"Debug, Clean-up, Stably working: genie Atlassian MCP server connects to Jira", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"Create custom lf filter to only show taskdirs with a remaining time estimate less-than-or-equal to a cut-off", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Shell script: Spawn new tmux-dashboard claude instance in CWD without link to any taskdir", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Debug: Terminal to launch weekly review script on Sundays crashes in dwm terminal tmux setup script", "model": "sonnet", "effort": "high", "is_default":"true"}

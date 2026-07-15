@@ -21,12 +21,16 @@ if [ -n "$CLAUDE_TMUX_MANAGED" ]; then
     exec $CLAUDE_BIN "$@"
 fi
 
-# --- Derive pane name from ::*.hmm ---
-goal_file=$(ls "$taskdir"/::*.hmm 2>/dev/null | head -1)
-if [ -n "$goal_file" ]; then
-    pane_name=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ' | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+# --- Derive pane name from ::*.hmm (or an explicit override) ---
+if [ -n "$PANE_NAME_OVERRIDE" ]; then
+    pane_name=$(echo "$PANE_NAME_OVERRIDE" | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
 else
-    pane_name=$(basename "$taskdir" | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+    goal_file=$(ls "$taskdir"/::*.hmm 2>/dev/null | head -1)
+    if [ -n "$goal_file" ]; then
+        pane_name=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ' | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+    else
+        pane_name=$(basename "$taskdir" | cut -c1-30 | sed 's/ /-/g; s/[^a-zA-Z0-9_-]//g')
+    fi
 fi
 [ -z "$pane_name" ] && pane_name="claude-task"
 
@@ -51,7 +55,9 @@ for arg in "$@"; do
     escaped_args="$escaped_args '$(echo "$arg" | sed "s/'/'\\\\''/g")'"
 done
 
-cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1 && exec $CLAUDE_BIN $escaped_args"
+cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1"
+[ -n "$CLAUDE_ADHOC" ] && cmd="$cmd && export CLAUDE_ADHOC=1"
+cmd="$cmd && exec $CLAUDE_BIN $escaped_args"
 
 # Create new pane in the running column
 dash_add_task running "$pane_name" "$cmd"
