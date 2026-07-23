@@ -4,12 +4,11 @@
 # starting state as running `claude` directly in the target directory.
 set -e
 
-target="${1:-$PWD}"
-target=$(cd "$target" && pwd)
+target=$(pwd)
 
 # Resolve symlinks (e.g. ~/main/bin/claude_adhoc) so INFRA points at the
 # real .infra dir, not wherever the invoking symlink happens to live.
 INFRA="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
 export PANE_NAME_OVERRIDE="adhoc-$(basename "$target")"
 export CLAUDE_ADHOC=1
-exec "$INFRA/taskdir_tmux_launch" "$target"
+exec "$INFRA/taskdir_tmux_launch" "$target" "$@"
