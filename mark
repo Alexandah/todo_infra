@@ -228,7 +228,7 @@ sum_time_estimates_per_category() {
 
 if [ "$category_to_set_non_interactively" = "NULL" ] ; then #INTERACTIVE MODE
 	categories=$(
-		find $categories_dir -mindepth 1 -maxdepth 1 -name .infra -o -name .claude -o -name new -o -path '*wait/*' -o -name '#*' -prune -o -type d -printf "%f\n"
+		find $categories_dir -mindepth 1 -maxdepth 1 -name '.*' -o -name '#*' -o -name new -o -path '*wait/*' -prune -o -type d -printf "%f\n"
 	)
 	taskdir_time=$(
 		find $taskdir -name ':time=*' -exec basename {} \; |
