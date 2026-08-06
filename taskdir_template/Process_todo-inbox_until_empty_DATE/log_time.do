@@ -5,7 +5,7 @@ source /home/erandalex/main/todo/.infra/bash_utils
 taskdir=$(cd "$(dirname "$0")" && pwd)
 
 # Accounts for --gap=1 not supported by fzf 0.54.2 on AMD machine
-if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
+if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
     fzf_gap_arg=''
 else
     fzf_gap_arg='--gap=1'

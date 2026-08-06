@@ -8,7 +8,7 @@ context_header=${1:-''}
 PLANNING_FALLACY_PENALTY=1.65 #planning fallacy penalty: assume things will take much longer than you think-- constant to multiply time estimates by
 
 #Accounts for argument --gap=1 not supported by fzf version 0.54.2 used on AMD machine
-if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then #AMD machine
+if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Rocky Linux"'; then #AMD machine
     fzf_gap_arg=''
 else #personal machine
     fzf_gap_arg='--gap=1'

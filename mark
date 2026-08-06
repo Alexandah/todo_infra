@@ -13,42 +13,11 @@ if [ ! -d "$taskdir" ]; then
 fi
 
 #Accounts for argument --gap=1 not supported by fzf version 0.54.2 used on AMD machine
-if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then #AMD machine
+if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Rocky Linux"'; then #AMD machine
     fzf_gap_arg=''
 else #personal machine
     fzf_gap_arg='--gap=1'
 fi
-
-#taskdir properties: path	name	category	goal	due_by	time
-get_category_path() {
-	local taskdir_realpath=$(realpath "$1")
-	local taskdir_category=$(dirname "$taskdir_realpath")
-	echo "$taskdir_category"
-}
-
-get_name() {
-	local taskdir="$1"
-	local taskdir_name=$(basename "$taskdir")
-	echo "$taskdir_name"
-}
-
-get_goal_path() {
-	local taskdir_realpath=$(realpath "$1")
-	local taskdir_goal=$(find $taskdir_realpath -name '::*')
-	echo "$taskdir_goal"
-}
-
-get_due_by_path() {
-	local taskdir_realpath=$(realpath "$1")
-	local taskdir_due_by=$(find $taskdir_realpath -name ':by_*')
-	echo "$taskdir_due_by"
-}
-
-get_time_path() {
-	local taskdir_realpath=$(realpath "$1")
-	local taskdir_time=$(find $taskdir_realpath -name ':time=*')
-	echo "$taskdir_time"
-}
 
 # Get the real path of the task directory
 taskdir_real=$(realpath "$taskdir")
@@ -267,18 +236,17 @@ else
 fi
 
 default_taskdir_rename_options=$(
-	echo -e "$taskdir_title\n$taskdir_name" |
-	sort |
-	uniq
+	echo -e "$taskdir_name\n$taskdir_title" | uniq
 )
 if [ "$mark_as" = "done" ] ; then
-	prompt="FINALIZE_AS -- >"
-	new_name=$(
-		echo "$default_taskdir_rename_options" | 
-		fzf --prompt="$prompt" --print-query $fzf_gap_arg |
-		tac |
-		head -n+1
-	)
+	#prompt="FINALIZE_AS -- >"
+	#new_name=$(
+	#	echo "$default_taskdir_rename_options" | 
+	#	fzf --prompt="$prompt" --print-query $fzf_gap_arg |
+	#	tac |
+	#	head -n+1
+	#)
+    new_name=$taskdir_title
 	time_suggestions=$(
 		echo "0.03       2m"
 		echo "0.08       5m"
