@@ -10,7 +10,7 @@ INFRA=$(dirname $(realpath $(which make_taskdir)))
 source "$INFRA/bash_utils"
 
 # Detect fzf gap arg (AMD vs personal machine)
-if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
+if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
     fzf_gap_arg=''
 else
     fzf_gap_arg='--gap=1'
@@ -59,7 +59,7 @@ if [ "$not_easy" -eq 1 ]; then
     # ── Context files (file browser dialog) ──────────────────────────────────────
     echo ""
     echo "Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
-    if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Red Hat Enterprise Linux"'; then
+    if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
         sleep 2
         ranger "$TASKDIR" || true
     else
