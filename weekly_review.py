@@ -53,10 +53,21 @@ def read_line_with_limit(prompt, char_limit):
             ch = sys.stdin.read(1)
             if ch in ("\n", "\r"):
                 break
-            if ch in ("\x7f", "\x08"):  # backspace/delete: preserve line editing
+            elif ch in ("\x7f", "\x08"):  # backspace/delete: preserve line editing
                 buf = buf[:-1]
-            else:
+            elif ch == "\x1b":
+                # Arrow keys / Home / End / etc. send a multi-byte CSI
+                # escape sequence (ESC [ <params> <final>); consume it
+                # whole per its grammar so it can't leak into buf. Not
+                # navigable here -- backspace to edit.
+                if sys.stdin.read(1) == "[":
+                    while sys.stdin.read(1) in "0123456789;":
+                        pass
+                continue
+            elif ch.isprintable():
                 buf += ch
+            else:
+                continue  # ignore any other unrecognized/control byte
             redraw(buf)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
@@ -127,7 +138,7 @@ run_lf("Press T to create a taskdir for any left-over iPhone todos, recurring th
 
 tee_print("iii. Update the timestamp for any people under ../relationships/* interacted with this week.")
 time.sleep(3)
-run_lf("Press t to mark anyone you interacted with this week.", Path.home() / "main/relationship", "set sortby time;set info time;set reverse")
+run_lf("Press tt to mark anyone you interacted with this week.", Path.home() / "main/relationship", "set sortby time;set info time;set reverse")
 
 tee_print("iv. Schedule a meet-up with someone from your relationship view.")
 time.sleep(3)
@@ -203,12 +214,7 @@ tee_print()
 tee_print("2. Post-Mortem of Agreements")
 tee_print("i. Review my agreements: How well did I adhere to my agreements this week?")
 time.sleep(3)
-agreements_for_further_focus = run_lf_select(
-    "Skim your agreements, considering how your behavior followed/diverged for each. Mark any worth focusing on. Press ENTER to confirm selection.",
-    Path.home() / "main/agreements"
-)
-tee_print("Agreements -- for further focus:")
-tee_print(indent("\n".join(agreements_for_further_focus)))
+run_lf("Skim your agreements, considering how your behavior followed/diverged for each. Press q when done.", Path.home() / "main/agreements")
 time.sleep(1)
 
 tee_print("ii. Write 2 sentences evaluating my compliance.")

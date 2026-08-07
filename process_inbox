@@ -23,6 +23,23 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		continue
 	fi
 
+	is_actionable=''
+	read -e -n 1 -p 'Is this something you wanna act on any time soon? (y/n): ' is_actionable
+	echo
+	if [ 'n' = "$is_actionable" ]; then
+		set +e
+		defer_to=$(printf 'maybe\n3_month\n4_year\n' | fzf --prompt="DEFER -- $item_name >" --header='Default: maybe' --print-query | tail -n1)
+		set -e
+		defer_to="${defer_to:-maybe}"
+		case "$defer_to" in
+			maybe|3_month|4_year) ;;
+			*) defer_to='maybe' ;;
+		esac
+		mv "$item" "$todo_root/$defer_to"
+		echo
+		continue
+	fi
+
 	do_it=''
 	read -e -n 1 -p 'Can this be done in <=5 minutes? (y/n): ' do_it
 	if [ 'y' = "$do_it" ]; then
@@ -30,6 +47,7 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		set +e
 		countdown -m 5
 		set -e
+		read -p 'Press ENTER when done.'
 		rm "$item"
 		echo
 		continue
@@ -37,16 +55,8 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		echo
 	fi
 
-	is_actionable=''
-	read -e -n 1 -p 'Is it actionable? (y/n): ' is_actionable
-	echo
-	if [ 'n' = "$is_actionable" ]; then
-		mv "$item" $todo_root/maybe
-		echo
-		continue
-	fi
-
 	echo "Clarify $item_name as a taskdir."
+	sleep 2
 	crash_if_nonzero_exit make_taskdir "$item_name"
 	taskdir_path="$STDOUT"
 	if [ -s "$item" ] ; then
