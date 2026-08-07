@@ -8,3 +8,8 @@
 {"task":"Create custom lf filter to only show taskdirs with a remaining time estimate less-than-or-equal to a cut-off", "model": "opus", "effort": "medium", "is_default":"false"}
 {"task":"Shell script: Spawn new tmux-dashboard claude instance in CWD without link to any taskdir", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"Debug: Terminal to launch weekly review script on Sundays crashes in dwm terminal tmux setup script", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Create adaptive memory support infra for dwm + lf keybinds", "model": "opus", "effort": "max", "is_default":"false"}
+{"task":"Integrate prompt QA feedback loop into 3-col tmux dashboard instead of clogging up the users terminal by polling while the LLM evals the prompt", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"taskdir Claude taskflow: Finalization stage includes after-action report to identify issues encountered during work, for metafeedback to improve taskflow or general infra", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Test E2E Goal3", "model": "sonnet", "effort": "low", "is_default":"false"}
+{"task":"Testing prompt gate tmuxification for configure automation flow", "model": "sonnet", "effort": "high", "is_default":"true"}

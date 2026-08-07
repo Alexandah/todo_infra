@@ -6,3 +6,4 @@ special_lf
 machine.local
 __pycache__/
 taskdir_template
+cron.log

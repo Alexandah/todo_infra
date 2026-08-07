@@ -26,8 +26,6 @@ launches Claude Code agents into a live tmux dashboard, one pane per task.
   See `claude_hooks/README.md`.
 - `taskdir_tmux_launch`, `claude_task`, `_claude.do` — launch a Claude session
   into the dashboard for a given taskdir (with goal/deadline/time context)
-- `claude_auto_daemon` — watches category dirs for `;claude_plz_do_this` signal
-  files and auto-launches tasks
 - `configure_automation` — interactive wizard to configure a taskdir's
   `_claude.do` (model, effort, plan/permission mode)
 - `_view_claude_dash.do` — attach to the `claude-dash` tmux session

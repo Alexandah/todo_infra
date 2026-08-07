@@ -407,8 +407,10 @@ dash_move_task() {
     # Move pane to below the target column's header (-d: don't steal focus)
     tmux join-pane -v -d -t "$target_header" -s "$pane_id"
 
-    # Update column metadata
+    # Update column metadata (ts lets guarded movers tell a fresh transition
+    # from a stale one, e.g. tmux-move-running-if-stale.sh)
     tmux set-option -p -t "$pane_id" @column "$new_column"
+    tmux set-option -p -t "$pane_id" @column_ts "$(date +%s%3N)"
 
     # Update zen stacks then dispatch to the active view renderer
     _dash_stacks_update "$pane_id" "$new_column"
