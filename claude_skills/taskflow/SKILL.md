@@ -22,6 +22,7 @@ Codifies how a taskdir goes from start to done. The flow the todo-system CLAUDE.
 
 Dispatch `taskflow-explorer` (Task tool, `subagent_type: taskflow-explorer`). It reads the goal note + taskdir + relevant filesystem context + any relevant web searches and returns a `<=40`-line digest (relevant files, inferred intent, constraints, risks, open questions). Merge it; post a 3-bullet read to the user.
 
+- **Triage the digest's OPEN QUESTIONS** rather than silently deciding them. Try decently hard to resolve each one itself from context first — do not bother the user with anything it can settle on its own. But if it has genuinely tried and remains decently uncertain, it is **encouraged** to surface that question as a surgical `AskUserQuestion` option at GATE A rather than baking an unflagged design decision into the "Proceed" option.
 - **GATE A (light):** `AskUserQuestion` — "Is this the right framing/scope?" Options: Proceed / Reframe / Out of scope. Catches a wrong-problem before any effort is spent.
 
 ### 2. Define Criteria — NORTH STAR (before Plan) — skill: `define-acceptance-and-validation-criteria`
@@ -52,7 +53,7 @@ From the locked criteria + digest, draft a plan and **decompose the work into me
 For **each distinct feature** from the plan:
 
 1. Dispatch a separate `taskflow-implementer` (own context), briefed with that feature's plan slice + the locked criteria. Distinct features get distinct subagents — do not lump unrelated work into one. Run foreground so permission prompts surface.
-2. **After the implementer returns:** conduct a QUICK spec-compliance review — does the changelist match the plan slice and criteria? Catch obvious misses or scope creep before moving to the next feature. This is a changelist sanity check, not a full re-validation (the fresh validator does that at phase 5).
+2. **After the implementer returns:** conduct a QUICK spec-compliance review — does the changelist match the plan slice and criteria? This is a best-judgement call on the implementer's **returned summary alone** — the conductor does NOT pull the diff or read the edited files (pulling implementation detail into the conductor defeats the point of the subagent; detailed verification is the Validate phase's job). Catch obvious misses or scope creep before moving to the next feature. This is a changelist sanity check, not a full re-validation (the fresh validator does that at phase 5).
 3. Surface any BLOCKED notes to the user before continuing.
 
 **Note:** if the taskdir's work involves creating or editing skills/agents, the implementer MUST use `superpowers:writing-skills`.
@@ -92,11 +93,18 @@ Cap the autonomous fix→revalidate loop at ~3 cycles (matches the constitution'
 
 Explicit checklist:
 
-1. **Git gate:** detect whether the work touched a git repo by running `git -C <modified-file-dir> rev-parse --is-inside-work-tree` for each modified file's directory — NOT from the taskdir, which is often outside any repo.
+1. **After-action report:** reflect on this run's own transcript, the work performed, and the user feedback given during it — what was rough, what needed re-explaining, where a gate mis-fired, where an instruction was ambiguous or missing. Read this task's own lines in `~/main/todo/.infra/log/taskflow_gate_choices.jsonl`: the user accepting the default/recommended option is evidence the flow worked at that point; a Reframe / "make stricter" / reject / edited-plan choice marks friction worth examining.
+   - **Every non-default gate choice in this task's log lines must be explicitly accounted for.** Concluding "the gate worked as intended" is only acceptable if the agent can state what the flow would have had to do differently to not need the user's correction at all. Rationalizing away a friction signal is the failure mode.
+   - **Trace each friction to its root cause before proposing a fix** — fix the cause, not the symptom that surfaced it.
+   - Bar for proposing a fix: the issue **actually bit during this task**, AND the fix is a small, concrete text edit to a named file (this SKILL.md, a taskflow agent brief, an `.infra` script, a CLAUDE.md, another skill, etc.). No speculative generalization, no useless restyling, no nitpicks. **Proposing nothing is a valid and common outcome — premature systematization is a cost.**
+   - At most ~3 candidate insights. May ask the user pointed, surgical questions via `AskUserQuestion` to test a hypothesis before proposing — these exploratory probes are not gates and are not logged (only the Gate E proposal dialog is).
+2. **GATE E (after-action):** propose the improvement(s) via `AskUserQuestion` — Apply / Skip / Revise . Log the response **immediately on receipt** (per Stage Dialog Logging), BEFORE making any edits. On Revise: incorporate the feedback and re-ask (cap ~2 rounds). On Skip, or nothing to propose: move on cleanly.
+3. **Apply approved edits** via a `taskflow-implementer` subagent — the conductor never edits directly. Skill/agent edits MUST use `superpowers:writing-skills`.
+4. **Git gate:** detect whether the work touched a git repo by running `git -C <modified-file-dir> rev-parse --is-inside-work-tree` for each modified file's directory — NOT from the taskdir, which is often outside any repo. Note: after-action edits may land in a different repo than the task work (`~/main/todo/.infra` IS a git repo; `~/main/todo` itself is not) — the per-directory check can legitimately yield two repos.
    - If yes: `AskUserQuestion` — offer to commit (and optionally push) with a proposed commit message. Commit/push **only on explicit approval**.
-   - **GATE E (git):** user approves the message + push, or declines.
+   - **GATE F (git):** user approves the message + push, or declines.
    - If not a git repo: skip cleanly.
-2. **Hand off:** report the terse validation line. Do NOT mark the task done or move the taskdir — that is the user's call via `mark` (scoped autonomy).
+5. **Hand off:** report the terse validation line. Do NOT mark the task done or move the taskdir — that is the user's call via `mark` (scoped autonomy).
 
 ## Re-enterable loop
 
@@ -120,12 +128,13 @@ After EVERY `AskUserQuestion` gate response is received, append one JSON line to
 
 Format (one line, no pretty-print):
 ```json
-{"task":"<taskdir-goal-name>","gate":"<A|B|C|D|E>","phase":"<phase-name>","options":["<opt1>","<opt2>",...],"chosen":"<exact-option-text>","is_default":<true|false>}
+{"task":"<taskdir-goal-name>","gate":"<A|B|C|D|E|F>","phase":"<phase-name>","options":["<opt1>","<opt2>",...],"chosen":"<exact-option-text>","is_default":<true|false>}
 ```
 
 Rules:
 - `is_default`: `true` if user chose the **first** option listed, `false` otherwise.
 - Gate B (ExitPlanMode) is a native gate — log `"chosen":"Approved"` / `"chosen":"Rejected"` / `"chosen":"Edited"` based on what the user did, `is_default` = `true` only on clean Approved.
+- Gate E (Finalize / after-action) — log the Apply/Revise/Skip response BEFORE making any approved edits; a Revise round logs each ask separately. Pre-proposal exploratory `AskUserQuestion` probes (step 1 of Finalize) are not Gate E and are not logged.
 - Append via Bash: `echo '<line>' >> <file>` (create file if absent, that's fine).
 - Log BEFORE proceeding to next phase — do not skip on timeout or early exit.
 - If the taskdir basename is ambiguous, use the full path relative to `~/main/doc/todo/`.
@@ -143,3 +152,5 @@ Rules:
 - Running tests/build without surfacing their output — `/goal` can only judge what the transcript shows.
 - Committing / pushing or marking the task done without the user.
 - Skipping the post-implementer spec-compliance review before moving to the next feature.
+- Turning the after-action report into a nitpick list or a speculative systematizing exercise.
+- Making after-action edits in the conductor, or before Gate E's dialog has been logged.
