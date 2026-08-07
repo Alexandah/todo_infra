@@ -71,6 +71,17 @@ $(cat "$f")
 err() { printf '%s\n' "$*" >&2; }
 die() { err "prompt_gate: $*"; exit 1; }
 
+# --- optional dashboard column-move hooks -------------------------------------
+# Only active when GATE_DASH_PANE names the pane we're running in AND the dash
+# helpers are sourceable; otherwise _gate_dash_move is a no-op so every other
+# invocation path (arg / stdin / interactive, no dashboard at all) is unaffected.
+_gate_dash_move() { :; }
+if [ -n "${GATE_DASH_PANE:-}" ] && [ -f "$SCRIPT_DIR/claude_hooks/tmux-helpers.sh" ]; then
+    if source "$SCRIPT_DIR/claude_hooks/tmux-helpers.sh" 2>/dev/null; then
+        _gate_dash_move() { dash_move_task "$GATE_DASH_PANE" "$1" >/dev/null 2>&1 || true; }
+    fi
+fi
+
 command -v "$CLAUDE_BIN" >/dev/null 2>&1 || die "$CLAUDE_BIN not in PATH"
 command -v jq >/dev/null 2>&1 || die "jq not in PATH"
 [ -f "$POLICY_FILE" ] || die "policy file not found: $POLICY_FILE"
@@ -214,12 +225,14 @@ gate_file() {
             res="$(evaluate "$spec")" || die "judge invocation failed"
             IFS=$'\t' read -r verdict reason <<<"$res"
             if [ "$verdict" = "PASS" ]; then
-                err "PASS"; trap - EXIT; strip_qa "$file"; exit 0
+                err "PASS"; _gate_dash_move done; trap - EXIT; strip_qa "$file"; exit 0
             fi
         fi
         err "FAIL: $reason"
         inject_qa "$file" "$reason"
+        _gate_dash_move perms
         "$editor" "$file" </dev/tty >/dev/tty 2>/dev/tty || die "editor exited nonzero"
+        _gate_dash_move running
     done
 }
 

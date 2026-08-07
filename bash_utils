@@ -1,4 +1,11 @@
 #!/bin/bash
+# ${FZF_DEFAULT_OPTS:-} (not $FZF_DEFAULT_OPTS): this file is sourced by
+# prompt_gate under `set -u`, and non-interactive contexts that don't source
+# shell rc files (e.g. a tmux-dashboard pane executing a script directly via
+# its shebang) never get FZF_DEFAULT_OPTS set at all -- an unguarded reference
+# there is a fatal "unbound variable" that silently kills the whole script.
+export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} --bind 'ctrl-left:backward-word,ctrl-right:forward-word'"
+
 pscriptdir() {
 	echo "$(dirname $(realpath $(which "$0")))"
 }
