@@ -17,7 +17,7 @@ while IFS= read -r kr_dir; do
 done <<< "$kr_dirs"
 kr_list=$(echo "$kr_list" | sed '/^\s*$/d')
 
-crash_if_nonzero_exit 'echo "$kr_list" | fzf --ansi --prompt="Link to KR >" --with-nth=1 --delimiter="\t" $fzf_gap_arg'
+crash_if_nonzero_exit 'echo "$kr_list" | fzf --ansi --prompt="Link to KR >" --with-nth=1 --delimiter="\t" $FZF_GAP_ARG'
 selected="$STDOUT"
 
 if [ "$selected" = "[no link]" ]; then

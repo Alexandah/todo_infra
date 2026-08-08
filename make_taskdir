@@ -7,15 +7,8 @@ context_header=${1:-''}
 
 PLANNING_FALLACY_PENALTY=1.65 #planning fallacy penalty: assume things will take much longer than you think-- constant to multiply time estimates by
 
-#Accounts for argument --gap=1 not supported by fzf version 0.54.2 used on AMD machine
-if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Rocky Linux"'; then #AMD machine
-    fzf_gap_arg=''
-else #personal machine
-    fzf_gap_arg='--gap=1'
-fi
-
 #Using fzf for consistent UX experience thru-out task-sys, even tho bash read would be equivalent here
-run 'echo "" | fzf --prompt="WRITE_GOAL -- 1-3 concrete sentences >" --header="$context_header" --print-query $fzf_gap_arg'
+run 'echo "" | fzf --prompt="WRITE_GOAL -- 1-3 concrete sentences >" --header="$context_header" --print-query $FZF_GAP_ARG'
 exit_code=$?
 
 if [ "$exit_code" -gt "1" ] ; then
@@ -57,7 +50,7 @@ estimated_time_suggestions=$(
 	#echo "9          9h"
 	#echo "10         10h"
 )
-crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" $fzf_gap_arg'
+crash_if_nonzero_exit 'echo "$estimated_time_suggestions" | fzf --prompt="EXPECTED_WORK_HOURS -- $goal >" --header="HOURS	   AKA" $FZF_GAP_ARG'
 estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $PLANNING_FALLACY_PENALTY * p") 
 
 taskdir=$TODOROOT/new/$goal

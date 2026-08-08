@@ -36,12 +36,12 @@ while IFS= read -r kr_dir; do
     fi
 
     # Prompt for score (0.1–1.0, color-coded)
-    crash_if_nonzero_exit 'echo "$score_options" | fzf --ansi --prompt="Score: $label >" $fzf_gap_arg'
+    crash_if_nonzero_exit 'echo "$score_options" | fzf --ansi --prompt="Score: $label >" $FZF_GAP_ARG'
     score=$(echo "$STDOUT" | grep -oE '[0-9]+\.[0-9]+')
     status=$(score_to_status "$score")
 
     # Prompt for optional note
-    run 'echo "" | fzf --prompt="Note (empty OK) >" --print-query $fzf_gap_arg'
+    run 'echo "" | fzf --prompt="Note (empty OK) >" --print-query $FZF_GAP_ARG'
     notes=$(echo "$STDOUT" | xargs)
 
     # Append to progress file

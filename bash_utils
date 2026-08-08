@@ -1,10 +1,25 @@
 #!/bin/bash
-# ${FZF_DEFAULT_OPTS:-} (not $FZF_DEFAULT_OPTS): this file is sourced by
-# prompt_gate under `set -u`, and non-interactive contexts that don't source
-# shell rc files (e.g. a tmux-dashboard pane executing a script directly via
-# its shebang) never get FZF_DEFAULT_OPTS set at all -- an unguarded reference
-# there is a fatal "unbound variable" that silently kills the whole script.
-export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} --bind 'ctrl-left:backward-word,ctrl-right:forward-word'"
+#Identifies which platform the todo-sys is running on for cross-platform compatibiity
+if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Rocky Linux"'; then #AMD machine
+    export MACHINE=AMD
+else #personal machine
+    export MACHINE=HOME
+fi
+
+#Accounts for cross-platform fzf differences:
+#   1. argument --gap=1 not supported by fzf version 0.54.2 used on AMD machine
+#   2. FZF_DEFAULT_OPTS doesnt support the same ops across the diff fzf versions
+if [ $MACHINE = AMD ]; then
+    export FZF_GAP_ARG=''
+else
+    export FZF_GAP_ARG='--gap=1'
+    # ${FZF_DEFAULT_OPTS:-} (not $FZF_DEFAULT_OPTS): this file is sourced by
+    # prompt_gate under `set -u`, and non-interactive contexts that don't source
+    # shell rc files (e.g. a tmux-dashboard pane executing a script directly via
+    # its shebang) never get FZF_DEFAULT_OPTS set at all -- an unguarded reference
+    # there is a fatal "unbound variable" that silently kills the whole script.
+    export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS:-} --bind 'ctrl-left:backward-word,ctrl-right:forward-word'"
+fi
 
 pscriptdir() {
 	echo "$(dirname $(realpath $(which "$0")))"

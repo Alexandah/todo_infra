@@ -28,7 +28,7 @@ TODO_CLAUDE_DIR  := $(TODO_ROOT)/.claude
 HOME_TMUXCONF    := $(HOME)/.tmux.conf
 
 HOOK_NAMES := tmux-helpers.sh tmux-move-done.sh tmux-move-perms.sh \
-              tmux-move-running.sh tmux-relayout.sh tmux-save-session-id.sh \
+              tmux-move-running.sh tmux-move-running-if-stale.sh tmux-relayout.sh tmux-save-session-id.sh \
               tmux-zen-toggle.sh
 
 # link <src> <dst>: idempotent symlink with backup of any real file in the way

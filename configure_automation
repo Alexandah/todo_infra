@@ -9,13 +9,6 @@ TASKDIR=$(dirname $(realpath "$0"))
 INFRA=$(dirname $(realpath $(which make_taskdir)))
 source "$INFRA/bash_utils"
 
-# Detect fzf gap arg (AMD vs personal machine)
-if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
-    fzf_gap_arg=''
-else
-    fzf_gap_arg='--gap=1'
-fi
-
 goal_file=$(ls "$TASKDIR"/::*.hmm 2>/dev/null | head -1)
 goal=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ')
 time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
@@ -25,7 +18,7 @@ deadline=$(basename "$TASKDIR"/:by_* 2>/dev/null | sed 's/^:by_//' | tr '_' ' ')
 # ── Task Difficulty ────────────────────────────────────────────────────────────────────
 crash_if_nonzero_exit \
     'printf "medium\neasy\nhard\nDEATH" | fzf --prompt="TASK DIFFICULTY > " \
-        --header="Estimate task difficulty-- picks model + effort" '"$fzf_gap_arg"
+        --header="Estimate task difficulty-- picks model + effort" '"$FZF_GAP_ARG"
 task_difficulty="$STDOUT"
 
 if [ "$task_difficulty" = "easy" ]; then

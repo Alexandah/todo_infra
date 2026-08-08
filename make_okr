@@ -4,7 +4,7 @@ source "$HERE"/bash_utils
 source "$HERE"/okr_utils
 
 # 1. Level selection (default: quarterly)
-crash_if_nonzero_exit 'printf "quarterly\nyearly" | fzf --prompt="OKR Level >" $fzf_gap_arg'
+crash_if_nonzero_exit 'printf "quarterly\nyearly" | fzf --prompt="OKR Level >" $FZF_GAP_ARG'
 level="$STDOUT"
 
 YEAR=$CURRENT_YEAR
@@ -35,7 +35,7 @@ if [ "$level" = "quarterly" ]; then
 
     # Show relative paths for readability, resolve back to absolute after selection
     yearly_krs_display=$(echo "$yearly_krs" | sed "s|^$OKR_ROOT/$YEAR/||")
-    crash_if_nonzero_exit 'echo "$yearly_krs_display" | fzf --prompt="Nest under yearly KR >" $fzf_gap_arg'
+    crash_if_nonzero_exit 'echo "$yearly_krs_display" | fzf --prompt="Nest under yearly KR >" $FZF_GAP_ARG'
     yearly_kr_dir="$OKR_ROOT/$YEAR/${STDOUT%/}"
 
     BASE_DIR="$yearly_kr_dir/Q${QUARTER}"
@@ -46,7 +46,7 @@ else
 fi
 
 # Objective name
-run 'echo "" | fzf --prompt="Objective name >" --print-query $fzf_gap_arg'
+run 'echo "" | fzf --prompt="Objective name >" --print-query $FZF_GAP_ARG'
 exit_code=$?
 if [ "$exit_code" -gt 1 ]; then exit "$exit_code"; fi
 obj_name=$(echo "$STDOUT" | xargs | sed 's/\s\+/_/g')
@@ -58,7 +58,7 @@ fi
 # KR names (repeat until empty or ESC)
 kr_names=()
 while true; do
-    run 'echo "" | fzf --prompt="KR for $obj_name >" --print-query $fzf_gap_arg'
+    run 'echo "" | fzf --prompt="KR for $obj_name >" --print-query $FZF_GAP_ARG'
     exit_code=$?
     if [ "$exit_code" -gt 1 ]; then break; fi
     kr_name=$(echo "$STDOUT" | xargs | sed 's/\s\+/_/g')
@@ -72,7 +72,7 @@ if [ ${#kr_names[@]} -eq 0 ]; then
 fi
 
 # KR type (once for all)
-crash_if_nonzero_exit 'printf "committed\naspirational" | fzf --prompt="OKR commitment level >" $fzf_gap_arg'
+crash_if_nonzero_exit 'printf "committed\naspirational" | fzf --prompt="OKR commitment level >" $FZF_GAP_ARG'
 kr_type="$STDOUT"
 
 # Create directories and files

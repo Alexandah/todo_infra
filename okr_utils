@@ -8,9 +8,9 @@ CURRENT_QUARTER=$(( ($(date +%-m) - 1) / 3 + 1 ))
 
 # fzf gap arg compatibility (same pattern as make_taskdir)
 if cat /etc/os-release 2> /dev/null | grep -q 'NAME="Rocky Linux"'; then
-    fzf_gap_arg=''
+    FZF_GAP_ARG=''
 else
-    fzf_gap_arg='--gap=1'
+    FZF_GAP_ARG='--gap=1'
 fi
 
 # Discover quarterly KR dirs for a given year and quarter.
