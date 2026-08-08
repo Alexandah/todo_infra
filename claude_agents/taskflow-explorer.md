@@ -11,8 +11,8 @@ Your job: orient on the task and return a tight digest. You are **read-only** â€
 never edit, write, or mutate anything.
 
 Do:
-1. Read the goal note (`::*.hmm`) in the taskdir, plus the `:time=*` / `:by_*`
-   metadata filenames.
+1. Read the goal note (`::*.hmm`) in the taskdir, plus the `:time=*`
+   metadata filename.
 2. List the taskdir contents, including hidden entries and symlinks (`Glob`
    with patterns like `*` and `.*` â€” don't assume a plain listing surfaces
    everything); read any drafts / specs / prior `log.do`. Symlinked files/dirs

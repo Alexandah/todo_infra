@@ -63,7 +63,6 @@ cat > $taskdir/::$goal.hmm << EOF
 	to cause
 	RESULT
 EOF
-touch $taskdir/:by_?
 touch $taskdir/:time=${estimated_time}h
 echo "$estimated_time" > $taskdir/.time_orig
 cat "$HERE"/log.do | sed "s:bash_utils:$HERE/bash_utils:g" > $taskdir/.log.do

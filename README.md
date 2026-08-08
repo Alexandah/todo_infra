@@ -3,7 +3,7 @@
 Infrastructure for a filesystem-based personal todo system rooted at
 `~/main/todo/`. Tasks are directories ("taskdirs"); category folders
 (`0_now/`, `1_today/`, `2_week/`, …) hold them; metadata is encoded in
-filenames (`::Goal.hmm`, `:by_F`, `:time=2h`). This repo (`.infra/`) holds the
+filenames (`::Goal.hmm`, `:time=2h`). This repo (`.infra/`) holds the
 scripts and config that drive it.
 
 This is also the single home for the **tmux-Claude manager** — the setup that

@@ -25,7 +25,6 @@ The taskdir will contain:
 - `::Goal_Name.hmm` — the task notes. Uses a tree-based note-taking
   system where indentation represents hierarchy. Read this file — it
   often contains detailed notes, sub-goals, and context beyond the title.
-- `:by_DEADLINE` — due date (encoded in filename, no content)
 - `:time=Xh` — estimated hours
 - `_claude.do` — the script that launched you (ignore)
 - **Arbitrary other files and directories** — the user may have placed

@@ -33,7 +33,6 @@ for i in $(seq 2 $num_resultants); do
 	splitoff_taskdir_path="$STDOUT"
 	splitoff_taskdir_name=$(basename "$splitoff_taskdir_path")
 	splitoff_taskdir_hmm=$(basename "$splitoff_taskdir_path"/::*.hmm)
-	#N/A	#splitoff_taskdir_dueby="$splitoff_taskdir_path"/:by_?		
 	splitoff_taskdir_time=$(basename "$splitoff_taskdir_path"/:time=*h)
 	splitoff_taskdir_log_path="$splitoff_taskdir_path"/log.do
 

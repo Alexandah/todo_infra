@@ -17,12 +17,10 @@ fi
 goal_file=$(ls ::*.hmm 2>/dev/null | head -1)
 goal=$(basename "$goal_file" .hmm | sed 's/^:://' | tr '_' ' ')
 time_est=$(basename :time=* 2>/dev/null | sed 's/^:time=//')
-deadline=$(basename :by_* 2>/dev/null | sed 's/^:by_//' | tr '_' ' ')
 
 msg="I am working on the following task:
 Goal: $goal
-Time estimate: $time_est
-Deadline: $deadline"
+Time estimate: $time_est"
 
 # Include .hmm file contents if non-trivial (more than just the title line)
 if [ -f "$goal_file" ]; then
