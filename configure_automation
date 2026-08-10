@@ -16,7 +16,7 @@ time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
 
 # ── Task Difficulty ────────────────────────────────────────────────────────────────────
 crash_if_nonzero_exit \
-    'printf "medium\neasy\nhard\nDEATH" | fzf --prompt="TASK DIFFICULTY > " \
+    'printf "medium\neasy\nhard\nvery hard\nDEATH" | fzf --prompt="TASK DIFFICULTY > " \
         --header="Estimate task difficulty-- picks model + effort" '"$FZF_GAP_ARG"
 task_difficulty="$STDOUT"
 
@@ -33,6 +33,11 @@ elif [ "$task_difficulty" = "medium" ]; then
 elif [ "$task_difficulty" = "hard" ]; then
     model_choice="opus"
     effort_choice="medium"
+    not_easy=1
+    chose_default_option=false
+elif [ "$task_difficulty" = "very hard" ]; then
+    model_choice="opus"
+    effort_choice="xhigh"
     not_easy=1
     chose_default_option=false
 elif [ "$task_difficulty" = "DEATH" ]; then

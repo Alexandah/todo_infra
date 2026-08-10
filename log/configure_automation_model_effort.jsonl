@@ -13,3 +13,4 @@
 {"task":"taskdir Claude taskflow: Finalization stage includes after-action report to identify issues encountered during work, for metafeedback to improve taskflow or general infra", "model": "opus", "effort": "medium", "is_default":"false"}
 {"task":"Test E2E Goal3", "model": "sonnet", "effort": "low", "is_default":"false"}
 {"task":"Testing prompt gate tmuxification for configure automation flow", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"LLM agent grammar-whitelist for tool execution project planning", "model": "opus", "effort": "max", "is_default":"false"}
