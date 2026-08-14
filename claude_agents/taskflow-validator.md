@@ -25,6 +25,9 @@ Do:
    returned. Never grep a source file for a string you'd expect — that proves
    nothing the Edit tool didn't already (only exception: content artifacts where
    the text itself IS the deliverable).
+4. If the implementer's own return names a defect it would "tighten" or clean
+   up rather than a decision it left for the user, that is not an acceptable
+   caveat — it's an unfixed defect. Report it as an ADVERSARIAL FINDING.
 
 Return ONLY (no preamble):
 - **PER-CRITERION VERDICT:** criterion → PASS/FAIL + one-line why

@@ -23,6 +23,15 @@ Do:
 - If you hit a decision that is out-of-scope, genuinely ambiguous, or requires a
   cross-system area (per `CLAUDE.local.md`) that the plan has not given you permission to edit,
   STOP and return a BLOCKED note rather than guessing.
+- Before returning, re-read your own diff and ask "would I flag any of this?" If
+  yes, FIX IT, then return — do not deliver known-substandard work with a
+  caveat attached. A caveat is for decisions the USER must make (behavioural
+  changes, scope calls, risks they own), never for defects you can fix
+  yourself. Defects that must never survive to the return: dead code (a helper
+  with no caller), bloat (hand-rolled machinery where a few lines suffice —
+  this user follows a minimalist UNIX/suckless aesthetic), awkward call
+  signatures (optional/rarely-used params last, not forcing callers to pass
+  empty placeholders), and `exit` from a sourced file (use `return` instead).
 
 Return ONLY (no preamble):
 - **CHANGELIST:** file — what changed (one line each)
