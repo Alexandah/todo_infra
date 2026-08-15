@@ -1,0 +1,40 @@
+#!/bin/bash
+# configure_in_dash — hand a new taskdir's _configure_automation.do to the tmux
+# dashboard as a RUNNING pane, freeing the caller's terminal. Runs at the end of
+# every taskdir-creation flow, so N creations become N configure panes.
+# All output goes to stderr: make_taskdir's stdout carries the taskdir path.
+set -e
+
+INFRA="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+taskdir=$(realpath "$1")
+
+# Absent = already configured, or the QA gate stashed it as .configure_automation.orig.
+if [ ! -x "$taskdir/_configure_automation.do" ]; then
+    echo "[configure] no _configure_automation.do in $taskdir — skipping." >&2
+    exit 0
+fi
+
+goal_file=$(ls "$taskdir"/::*.hmm 2>/dev/null | head -1)
+goal=$(basename "${goal_file:-$taskdir}" .hmm | sed 's/^:://' | tr '_' ' ')
+label=$(echo "$goal" | cut -c1-30)	#pane border truncation, matching taskdir_tmux_launch
+
+# DASH_NO_COLOR: the wizard opens on an fzf prompt, so dash_add_task's `/color`
+# send-keys would be typed into that query instead of into a Claude.
+if source "$INFRA/claude_hooks/tmux-helpers.sh" 2>/dev/null && dash_ensure_session 2>/dev/null &&
+   pane=$(DASH_NO_COLOR=1 dash_add_task running "configure: $label" \
+          "cd $(printf '%q' "$taskdir") && ./_configure_automation.do") && [ -n "$pane" ]; then
+    # Tells `mark` not to mv the taskdir mid-wizard: configure_automation resolves
+    # TASKDIR once at startup, so a move invalidates every path it holds. Holds the
+    # pane id rather than being a bare touch-file because tmux kill-pane does NOT
+    # reliably run the pane shell's traps (verified) -- so `mark` keys liveness on
+    # the pane still existing, and every death path self-invalidates.
+    echo "$pane" > "$taskdir/.configure_in_flight"
+    echo "[configure] '$goal' in dashboard pane $pane (running). Press ';' in lf/ranger to attend it." >&2
+    exit 0
+fi
+
+# No dashboard. Run inline only if a terminal exists -- make_taskdir is often called
+# through bash_utils' run(), which redirects stdout to a file, and fzf/lf/hmm need a tty.
+[ -t 1 ] || { echo "[configure] no dashboard or terminal — run $taskdir/_configure_automation.do by hand." >&2; exit 0; }
+echo "[configure] no dashboard — running the wizard inline." >&2
+cd "$taskdir" && exec ./_configure_automation.do

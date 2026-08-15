@@ -29,7 +29,10 @@ EOF
 
 #split off & customize duplicates
 for i in $(seq 2 $num_resultants); do
-	crash_if_nonzero_exit '"$HERE"/make_taskdir "splitting ~ $taskdir_name"'
+	#NO_AUTO_CONFIGURE: this make_taskdir call exists only to harvest a goal name
+	#+ time file; the dir it creates is rm -r'd below. Auto-configuring it would
+	#spawn a dashboard pane pointed at a directory about to be deleted.
+	crash_if_nonzero_exit 'NO_AUTO_CONFIGURE=1 "$HERE"/make_taskdir "splitting ~ $taskdir_name"'
 	splitoff_taskdir_path="$STDOUT"
 	splitoff_taskdir_name=$(basename "$splitoff_taskdir_path")
 	splitoff_taskdir_hmm=$(basename "$splitoff_taskdir_path"/::*.hmm)
@@ -47,6 +50,8 @@ for i in $(seq 2 $num_resultants); do
 
 	rm -r "$splitoff_taskdir_path"
 	mv "$dup_path" "$dup_parent_dir"/"$splitoff_taskdir_name"
+	#now that the split-off dir is at its final path, hand it to the dashboard
+	"$HERE"/configure_in_dash "$dup_parent_dir"/"$splitoff_taskdir_name" || true
 done
 
 #modify original taskdir
@@ -103,4 +108,6 @@ estimated_time=$(dc --expression="2 k $(echo "$STDOUT" | awk '{print $1}') $PLAN
 set -e
 mv -f "$taskdir_path"/::*.hmm "$taskdir_path"/::"$goal".hmm || true	#to prevent crash just bc kept original goal description 
 mv -f "$taskdir_path"/:time=*h "$taskdir_path"/:time="$estimated_time"h || true	#to prevent crash just bc time file of same amt already exists
-mv -T "$taskdir_path" "$taskdir_parent_dir"/"$goal" || true	#to prevent crash just bc kept original goal description 
+mv -T "$taskdir_path" "$taskdir_parent_dir"/"$goal" || true	#to prevent crash just bc kept original goal description
+#no-ops if the original was already configured (no _configure_automation.do)
+"$HERE"/configure_in_dash "$taskdir_parent_dir"/"$goal" || true

@@ -40,9 +40,42 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		continue
 	fi
 
-	do_it=''
-	read -e -n 1 -p 'Can this be done in <=5 minutes? (y/n): ' do_it
-	if [ 'y' = "$do_it" ]; then
+	# ── Route it ───────────────────────────────────────────────────────────
+	# Three ways to discharge a snippet, not two: the missing middle is "fire a
+	# Claude at it right now", for anything self-contained enough to not need a
+	# written spec. A headless haiku call pre-computes the recommended route and
+	# lists it first; the human still picks.
+	item_text="$(echo "$item_name" | tr '_' ' ')"
+	if [ -s "$item" ]; then
+		item_text="$item_text
+$(cat "$item")"
+	fi
+	rec=$(echo "$item_text" | timeout 15 $CLAUDE_BIN -p --model haiku \
+		--tools "" --no-session-persistence \
+		--system-prompt 'Classify how this todo snippet should be handled. These are terse personal notes -- being terse is NOT itself a reason to demand a spec, since a capable agent can explore a codebase and ask. Routes: "self" = the human must do it (a chore, a judgment call, or something needing physical/account access an AI lacks). "claude" = an AI coding agent could make a genuine attempt from this note alone, even if it must investigate first. "taskdir" = reserve for genuinely multi-step or high-stakes work where a wrong guess is expensive to undo. Default to "claude" when torn: it is cheap and reversible, whereas "taskdir" costs a full specification ceremony. Give the route and a reason of 10 words or fewer.' \
+		--json-schema '{"type":"object","properties":{"route":{"type":"string","enum":["self","claude","taskdir"]},"why":{"type":"string"}},"required":["route","why"]}' \
+		2>/dev/null | jq -r '"\(.route)\t\(.why)"' 2>/dev/null)
+	rec_route=$(echo "$rec" | cut -f1)
+	rec_why=$(echo "$rec" | cut -f2-)
+	# Any failure -- timeout, no jq, bad json -- falls back to the old default.
+	case "$rec_route" in
+		self|claude|taskdir) ;;
+		*) rec_route='taskdir'; rec_why='no recommendation available' ;;
+	esac
+
+	opt_self='do it now myself'
+	opt_claude='claude now (adhoc)'
+	opt_taskdir='spec as taskdir'
+	case "$rec_route" in
+		self)    routes=$(printf '%s\n%s\n%s' "$opt_self" "$opt_claude" "$opt_taskdir") ;;
+		claude)  routes=$(printf '%s\n%s\n%s' "$opt_claude" "$opt_self" "$opt_taskdir") ;;
+		taskdir) routes=$(printf '%s\n%s\n%s' "$opt_taskdir" "$opt_self" "$opt_claude") ;;
+	esac
+	set +e
+	route=$(echo "$routes" | fzf --prompt="ROUTE -- $item_name >" --header="recommended: $rec_route -- $rec_why" $FZF_GAP_ARG)
+	set -e
+
+	if [ "$opt_self" = "$route" ]; then
 		echo 'Then do it right now.'
 		set +e
 		countdown -m 5
@@ -51,8 +84,21 @@ for item in `find $todo_root/new -maxdepth 1 -type f`; do
 		rm "$item"
 		echo
 		continue
-	else
+	fi
+
+	if [ "$opt_claude" = "$route" ]; then
+		# No taskdir, no ceremony -- the snippet IS the prompt. Runs in ~/main so
+		# the agent can reach anything; it can cd from there.
+		(cd "$HOME/main" && "$HERE"/claude_adhoc "$item_text")
+		rm "$item"
 		echo
+		continue
+	fi
+
+	if [ -z "$route" ]; then	#fzf aborted -- leave it in the inbox for next pass
+		echo "Skipped $item_name."
+		echo
+		continue
 	fi
 
 	echo "Clarify $item_name as a taskdir."
