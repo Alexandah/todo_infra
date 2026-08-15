@@ -11,6 +11,24 @@ CLAUDE_DASH_WINDOW="dash"
 CLAUDE_DASH_LOCKFILE="/tmp/claude-dash-relayout.lock"
 CLAUDE_DASH_PERMS_STACK="${CLAUDE_DASH_PERMS_STACK:-/tmp/claude-dash-perms.stack}"
 CLAUDE_DASH_DONE_STACK="${CLAUDE_DASH_DONE_STACK:-/tmp/claude-dash-done.stack}"
+CLAUDE_DASH_COLOR_STATE="${CLAUDE_DASH_COLOR_STATE:-/tmp/claude-dash-color.state}"
+CLAUDE_DASH_COLOR_LOCKFILE="${CLAUDE_DASH_COLOR_LOCKFILE:-/tmp/claude-dash-color.lock}"
+_DASH_COLORS=(red blue green yellow purple orange pink cyan)
+
+# --- _dash_next_color ---
+# Round-robin through _DASH_COLORS, persisting the last-used index across
+# invocations in CLAUDE_DASH_COLOR_STATE (lock-guarded for concurrent launches).
+_dash_next_color() {
+    local idx
+    {
+        flock -x 9
+        idx=$(cat "$CLAUDE_DASH_COLOR_STATE" 2>/dev/null)
+        [ -z "$idx" ] && idx=-1
+        idx=$(( (idx + 1) % ${#_DASH_COLORS[@]} ))
+        echo "$idx" > "$CLAUDE_DASH_COLOR_STATE"
+    } 9>"$CLAUDE_DASH_COLOR_LOCKFILE"
+    echo "${_DASH_COLORS[$idx]}"
+}
 
 # --- _dash_stack_push ---
 # Push pane_id onto a stack file (dedupe-then-append so it is the unique top).
@@ -370,6 +388,13 @@ dash_add_task() {
     # Set metadata
     tmux set-option -p -t "$new_pane" @column "$column"
     tmux set-option -p -t "$new_pane" @task_name "$task_name"
+
+    # Round-robin session coloring: inject `/color <next>` once the new
+    # pane's Claude instance has booted enough to read its input loop.
+    local color
+    color=$(_dash_next_color)
+    ( sleep 2; tmux send-keys -t "$new_pane" "/color $color" Enter ) &
+    disown 2>/dev/null || true
 
     dash_relayout
 
