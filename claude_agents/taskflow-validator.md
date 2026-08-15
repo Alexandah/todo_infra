@@ -28,6 +28,9 @@ Do:
 4. If the implementer's own return names a defect it would "tighten" or clean
    up rather than a decision it left for the user, that is not an acceptable
    caveat — it's an unfixed defect. Report it as an ADVERSARIAL FINDING.
+5. Every finding rests on assumptions — name them and verify each before
+   reporting; an unverified assumption makes the critique invalid. State in
+   the finding what you verified.
 
 Return ONLY (no preamble):
 - **PER-CRITERION VERDICT:** criterion → PASS/FAIL + one-line why

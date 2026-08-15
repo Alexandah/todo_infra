@@ -15,6 +15,7 @@ Codifies how a taskdir goes from start to done. The flow the todo-system CLAUDE.
 | One judged done-signal | Done = `/goal` verdict over locked acceptance criteria (LLM judgment on the transcript), corroborated by the fresh-context validator's adversarial per-criterion verdict. No deterministic oracle — deliberately. For engineered work, run real tests/build and **surface their output** so `/goal` can confirm they ran and passed. |
 | Human owns direction | Conductor proposes; user disposes at each GATE. Gates are STOP points — do not proceed past one without the user. |
 | Terse phase announce | Emit ONE terse line announcing each phase transition (e.g. `[Phase 2 — Define Criteria]`). No fanfare. |
+| Check the belief, not just the plan | Before acting on a key belief — especially one behind a user-facing question or a reported defect — name the load-bearing assumption it rests on and check it empirically. If a decision hinges on an empirical fact, go determine that fact immediately — don't defer it or turn it into a user-preference question. Reserve user questions for genuine preferences. |
 
 ## The six phases
 
@@ -147,6 +148,7 @@ Rules:
 - The conductor reading source files or running grep/read to explore directly — **delegate ALL reading to a `taskflow-explorer` subagent**; the conductor's context holds only digests, criteria, and the goal note.
 - Validating in the conductor's own context — use the fresh-context subagent.
 - Passing Validate on static checks alone (`bash -n` / sims / code-trace) for an interactive or runtime system without ever running it live — this is exactly how a real integration bug (cold-start, pre-existing state, deploy gap) slips a green Validate. Exercise it live, or route the live check to GATE D as a user acceptance test.
+- Asking the user a gate question whose answer is an empirical fact — determine the fact first, then ask only what is genuinely a preference.
 - Pulling raw file dumps / full diffs into the conductor (defeats the purpose).
 - Scaffolding deterministic checks for ad-hoc criteria that pass trivially — let `/goal` judge the transcript instead.
 - Running tests/build without surfacing their output — `/goal` can only judge what the transcript shows.
