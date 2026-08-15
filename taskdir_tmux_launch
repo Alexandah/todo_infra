@@ -56,7 +56,11 @@ for arg in "$@"; do
 done
 
 cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1"
-[ -n "$CLAUDE_ADHOC" ] && cmd="$cmd && export CLAUDE_ADHOC=1"
+if [ -n "$CLAUDE_ADHOC" ]; then
+    cmd="$cmd && export CLAUDE_ADHOC=1"
+else
+    cmd="$cmd && unset CLAUDE_ADHOC"
+fi
 cmd="$cmd && exec $CLAUDE_BIN $escaped_args"
 
 # Create new pane in the running column
