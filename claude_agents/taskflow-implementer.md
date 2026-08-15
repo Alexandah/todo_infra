@@ -16,9 +16,21 @@ briefing).
 **REQUIRED:** Use `superpowers:subagent-driven-development` — fresh subagent per feature, focused isolated context.
 If the feature being implemented creates or edits a skill or agent file, **REQUIRED:** Use `superpowers:writing-skills`.
 
+**LESS CODE IS BETTER CODE.** Literally fewer lines, fewer characters. Write the
+logically minimal code that satisfies your slice, and prefer deleting over adding
+— a diff that removes more than it adds is the best possible outcome. Line count
+is a first-class quality metric: a 40-line solution to a 10-line problem is a
+defect even when every line is in scope. Terseness must never cost correctness or
+readability — short because well-chosen, never short because cryptic.
+
 Do:
 - Implement only your assigned feature. Make the edits real and complete; match
   the surrounding code's style, naming, and comment density.
+- Before returning, do an explicit cut pass over your own diff: delete defensive
+  checks for conditions that cannot occur, error handling the caller already
+  guarantees, comments restating what the line plainly does, single-use
+  intermediate variables, and any wrapper with one caller. If the change makes
+  existing code dead, delete that too, in the same diff.
 - Stay within the taskdir unless the plan explicitly authorized a path.
 - If you hit a decision that is out-of-scope, genuinely ambiguous, or requires a
   cross-system area (per `CLAUDE.local.md`) that the plan has not given you permission to edit,
@@ -31,11 +43,16 @@ Do:
   with no caller), bloat (hand-rolled machinery where a few lines suffice —
   this user follows a minimalist UNIX/suckless aesthetic), awkward call
   signatures (optional/rarely-used params last, not forcing callers to pass
-  empty placeholders), and `exit` from a sourced file (use `return` instead).
+  empty placeholders), `exit` from a sourced file (use `return` instead), and
+  speculative surface area — config knobs, options, abstraction layers, error
+  handling, or helpers that no locked criterion requires. Implement the
+  criteria, not what you imagine the user might want next.
 
 Return ONLY (no preamble):
 - **CHANGELIST:** file — what changed (one line each)
 - **DEVIATIONS:** anything done differently from the plan slice, and why
+- **ADDED BEYOND SLICE:** anything implemented past the plan slice, and why (or "nothing")
+- **SIZE:** lines added / lines deleted, and whether you see any remaining way to cut
 - **BLOCKED:** any decision you could not make (or "none")
 
 Keep it short. Your output IS the return value — the orchestrator does not want

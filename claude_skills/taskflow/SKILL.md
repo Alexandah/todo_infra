@@ -15,6 +15,7 @@ Codifies how a taskdir goes from start to done. The flow the todo-system CLAUDE.
 | One judged done-signal | Done = `/goal` verdict over locked acceptance criteria (LLM judgment on the transcript), corroborated by the fresh-context validator's adversarial per-criterion verdict. No deterministic oracle — deliberately. For engineered work, run real tests/build and **surface their output** so `/goal` can confirm they ran and passed. |
 | Human owns direction | Conductor proposes; user disposes at each GATE. Gates are STOP points — do not proceed past one without the user. |
 | Terse phase announce | Emit ONE terse line announcing each phase transition (e.g. `[Phase 2 — Define Criteria]`). No fanfare. |
+| Smallest thing that works | **LESS CODE IS BETTER CODE** — literally fewer lines and characters, with deletions better still. Two axes, both enforced: (1) *scope* — the deliverable is the minimum satisfying the locked criteria, nothing more; added surface area (new files, config knobs, abstraction layers, helpers, unrequested error paths) is a cost the user pays forever. (2) *density* — of the code that must exist, write the logically minimal amount. A 40-line solution to a 10-line problem is a defect even if every line is in scope. Prefer editing an existing thing over creating a new one; if a new file is created, the plan must say why an edit could not do it. **Bloat is a defect, ranked with correctness bugs — not a style nit.** |
 | Check the belief, not just the plan | Before acting on a key belief — especially one behind a user-facing question or a reported defect — name the load-bearing assumption it rests on and check it empirically. If a decision hinges on an empirical fact, go determine that fact immediately — don't defer it or turn it into a user-preference question. Reserve user questions for genuine preferences. |
 
 ## The six phases
@@ -39,11 +40,13 @@ The most important gate: define what "done" means **before planning**. Everythin
   $(cat ~/main/todo/.infra/prompt_qa_policy.md)"
   ```
   Let the session self-iterate to the bar, then the goal clears.
-- **GATE C (LOAD-BEARING):** `AskUserQuestion` — present the criteria, ask "Approve these acceptance criteria?" Options: Approve / Make stricter / Add criterion / Remove criterion. Do not plan until the north star is locked.
+- **GATE C (LOAD-BEARING):** `AskUserQuestion` — present the criteria, ask "Approve these acceptance criteria?" Options: Approve / Simplify — cut to essentials / Make stricter / Add or remove criterion. Do not plan until the north star is locked.
 
 ### 3. Plan — conductor [in-session]
 
 From the locked criteria + digest, draft a plan and **decompose the work into meaningfully distinct features** (each independently implementable and verifiable). Enter plan mode and call **ExitPlanMode** — a NATIVE blocking gate.
+
+Decomposition **tracks** distinct work; it does not manufacture it. The feature list must contain nothing the locked criteria don't require — if a feature traces to no criterion, cut it. Prefer editing existing files (use the digest's WHAT ALREADY EXISTS) over creating new ones, and state for each new file why an edit could not do it. **If the whole task is one small edit, one feature is the correct decomposition** — do not split work into features to look thorough.
 
 - **GATE B (load-bearing, native):** user approves / edits / rejects, unlimited rounds. Implementation cannot begin until approval.
 
@@ -88,7 +91,7 @@ checks (tests/lint/build) were run and observed to pass"
 
 Cap the autonomous fix→revalidate loop at ~3 cycles (matches the constitution's autonomous-resolution rule). Done-signal = this `/goal` verdict plus the validator's judgment.
 
-- **GATE D:** `AskUserQuestion` — show per-criterion verdict + adversarial findings, ask "Accept validation results?" Options: Accept / Be stricter / Reject.
+- **GATE D:** `AskUserQuestion` — show per-criterion verdict + over-build findings + adversarial findings, ask "Accept validation results?" Options: Accept / Trim over-build / Be stricter / Reject.
 
 ### 6. Finalize — conductor [in-session]
 
@@ -151,6 +154,11 @@ Rules:
 - Asking the user a gate question whose answer is an empirical fact — determine the fact first, then ask only what is genuinely a preference.
 - Pulling raw file dumps / full diffs into the conductor (defeats the purpose).
 - Scaffolding deterministic checks for ad-hoc criteria that pass trivially — let `/goal` judge the transcript instead.
+- Creating a new file where an edit to an existing one would do — check the digest's WHAT ALREADY EXISTS first.
+- Implementing past the locked criteria because it "might be wanted later" — that is a defect, not foresight.
+- Writing 40 lines where 10 would do, then calling it done because all 40 are in scope — density is judged separately from scope.
+- Leaving code the change made dead, or passing up a deletion the change enabled.
+- A validator finding that demands machinery no criterion requires — hostile means demanding evidence, not demanding more code.
 - Running tests/build without surfacing their output — `/goal` can only judge what the transcript shows.
 - Committing / pushing or marking the task done without the user.
 - Skipping the post-implementer spec-compliance review before moving to the next feature.
