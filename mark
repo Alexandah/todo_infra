@@ -38,6 +38,29 @@ else
 	exit 1
 fi
 
+# Refuse to move a taskdir whose configure/QA wizard is still running: those
+# scripts resolve their TASKDIR once at startup, so a move mid-flight invalidates
+# every absolute path they hold -- including the one baked into the _claude.do
+# they generate. Leave it in place; categorize it on the next pass, once it is
+# actually configured and you know what the task is.
+#
+# .configure_in_flight holds the dashboard pane id (see configure_in_dash). It is
+# only honored while that pane still exists -- tmux kill-pane does not reliably
+# run the pane shell's traps, so a marker outliving its pane is stale, not live.
+flight_marker="$taskdir_real/.configure_in_flight"
+if [ -e "$flight_marker" ]; then
+	flight_pane=$(cat "$flight_marker" 2>/dev/null)
+	if [ -n "$flight_pane" ] && tmux list-panes -a -F '#{pane_id}' 2>/dev/null | grep -qx "$flight_pane"; then
+		echo "Skipping '$(basename "$taskdir_real")': configure wizard still in flight (pane $flight_pane). Finish or cancel it, then mark it."
+		exit 0
+	fi
+	rm -f "$flight_marker"	#pane is gone -- stale marker
+fi
+if [ -e "$taskdir_real/_prompt_qa_in_flight.do" ]; then
+	echo "Skipping '$(basename "$taskdir_real")': prompt QA gate still in flight. Finish or cancel it, then mark it."
+	exit 0
+fi
+
 taskdir_name="$(basename "$taskdir")"
 
 sum_time_estimates_per_category() {

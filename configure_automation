@@ -16,7 +16,7 @@ time_est=$(basename "$TASKDIR"/:time=* 2>/dev/null | sed 's/^:time=//')
 
 # ── Task Difficulty ────────────────────────────────────────────────────────────────────
 crash_if_nonzero_exit \
-    'printf "medium\neasy\nhard\nvery hard\nDEATH" | fzf --prompt="TASK DIFFICULTY > " \
+    'printf "medium\neasy\nhard\nvery hard\nDEATH" | fzf --prompt="TASK DIFFICULTY -- $goal > " \
         --header="Estimate task difficulty-- picks model + effort" '"$FZF_GAP_ARG"
 task_difficulty="$STDOUT"
 
@@ -55,7 +55,7 @@ fi
 if [ "$not_easy" -eq 1 ]; then
     # ── Context files (file browser dialog) ──────────────────────────────────────
     echo ""
-    echo "Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
+    echo "[$goal] Add relevant files/symlinks to the taskdir for reference. Press 'q' when done."
     if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
         sleep 2
         ranger "$TASKDIR" || true
@@ -247,7 +247,9 @@ QA_CONTINUE_TEMPLATE
     dash_launched=false
     if command -v tmux >/dev/null 2>&1 && [ -f "$INFRA/claude_hooks/tmux-helpers.sh" ]; then
         if source "$INFRA/claude_hooks/tmux-helpers.sh" 2>/dev/null && dash_ensure_session; then
-            qa_pane=$(dash_add_task running "QA gate: $goal" "$TASKDIR/.qa_gate_continue.sh") || qa_pane=""
+            # DASH_NO_COLOR: this pane runs prompt_gate's fzf/hmm TUI, not
+            # Claude -- a `/color` send-keys would be typed into that prompt.
+            qa_pane=$(DASH_NO_COLOR=1 dash_add_task running "QA gate: $goal" "$TASKDIR/.qa_gate_continue.sh") || qa_pane=""
             if [ -n "$qa_pane" ]; then
                 dash_launched=true
                 # ── Stash the entrypoint & install an in-flight stub ────────────────

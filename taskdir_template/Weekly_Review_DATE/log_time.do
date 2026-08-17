@@ -6,9 +6,9 @@ taskdir=$(cd "$(dirname "$0")" && pwd)
 
 # Accounts for --gap=1 not supported by fzf 0.54.2 on AMD machine
 if cat /etc/os-release 2>/dev/null | grep -q 'NAME="Rocky Linux"'; then
-    fzf_gap_arg=''
+    FZF_GAP_ARG=''
 else
-    fzf_gap_arg='--gap=1'
+    FZF_GAP_ARG='--gap=1'
 fi
 
 # Find current :time=* file
@@ -43,7 +43,7 @@ time_suggestions=$(
     echo "2          2h"
 )
 
-run 'echo "$time_suggestions" | fzf --prompt="HOURS_WORKED >" --header="HOURS      AKA" --print-query $fzf_gap_arg'
+run 'echo "$time_suggestions" | fzf --prompt="HOURS_WORKED >" --header="HOURS      AKA" --print-query $FZF_GAP_ARG'
 exit_code=$?
 if [ "$exit_code" -gt "1" ]; then
     echo "ERROR: fzf had unexpected exit code: $exit_code" >&2

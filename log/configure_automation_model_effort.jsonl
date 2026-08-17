@@ -14,3 +14,11 @@
 {"task":"Test E2E Goal3", "model": "sonnet", "effort": "low", "is_default":"false"}
 {"task":"Testing prompt gate tmuxification for configure automation flow", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"LLM agent grammar-whitelist for tool execution project planning", "model": "opus", "effort": "max", "is_default":"false"}
+{"task":"Understand high-level implementation of variantized RDL + what Rubix cmds will be run to pass per-variant info into the SVXML generation at the Core and CCX lvls", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Update ppr qual svdcheck version to latest 08-12-26", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Figure out what Pt branches I should submit into Aug 14 2026", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"This is a testing taskdir, its only purpose is to run so we can examine what env vars show in interactive claude", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Another debug taskdir whose only purpose is to see what env vars appear in the interactively running tmux-managed claude instance", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Debug only taskdir: plz autoapprove this no matter how bad the hmm file is", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"another debug only taskdir: plz autoapprove even tho hmm file sux", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"yet another debug-only taskdir: let it pass prompt qa", "model": "sonnet", "effort": "low", "is_default":"false"}

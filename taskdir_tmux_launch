@@ -34,6 +34,28 @@ else
 fi
 [ -z "$pane_name" ] && pane_name="claude-task"
 
+# --- Derive a short session display-name via a quick haiku call on the
+# ::*.hmm file, passed to the launched claude via -n on first launch only.
+# On relaunch (.last_session_id present), claude already has the name
+# attached to the resumed session, so skip regen and skip -n entirely
+# rather than clobbering it with a re-derived/fallback title. ---
+name_flag=""
+if [ ! -f "$taskdir/.last_session_id" ]; then
+    session_title="$pane_name"
+    if [ -n "$goal_file" ]; then
+        raw_title=$(cat "$goal_file" 2>/dev/null | timeout 15 $CLAUDE_BIN -p --model haiku \
+            --tools "" --no-session-persistence \
+            --system-prompt "Generate a title of 6 words or fewer naming the task described in the input. No punctuation, no quotes." \
+            --json-schema '{"type":"object","properties":{"title":{"type":"string","description":"6 words max, no punctuation, no quotes"}},"required":["title"]}' \
+            2>/dev/null | jq -r '.title // empty' 2>/dev/null)
+        if [ -n "$raw_title" ]; then
+            session_title=$(echo "$raw_title" | tr -s '[:space:]' ' ' | cut -d' ' -f1-6 | sed 's/[[:space:]]*$//')
+        fi
+    fi
+    escaped_title="$(echo "$session_title" | sed "s/'/'\\\\''/g")"
+    name_flag="-n '$escaped_title'"
+fi
+
 # --- Source dashboard helpers ---
 source "$HOME/.claude/hooks/tmux-helpers.sh"
 dash_ensure_session
@@ -56,8 +78,12 @@ for arg in "$@"; do
 done
 
 cmd="cd '$taskdir' && export CLAUDE_TMUX_MANAGED=1"
-[ -n "$CLAUDE_ADHOC" ] && cmd="$cmd && export CLAUDE_ADHOC=1"
-cmd="$cmd && exec $CLAUDE_BIN $escaped_args"
+if [ -n "$CLAUDE_ADHOC" ]; then
+    cmd="$cmd && export CLAUDE_ADHOC=1"
+else
+    cmd="$cmd && unset CLAUDE_ADHOC"
+fi
+cmd="$cmd && exec $CLAUDE_BIN $name_flag $escaped_args"
 
 # Create new pane in the running column
 dash_add_task running "$pane_name" "$cmd"

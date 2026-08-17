@@ -88,4 +88,12 @@ chmod +x $taskdir/_configure_automation.do
 # Prompt to link to OKR (link_to_okr has a [no link] default)
 #(cd "$taskdir" && "$HERE"/link_to_okr)
 
+# Close the loop: hand the wizard straight to the tmux dashboard so the terminal
+# is free and the taskdir is on its way to a running Claude without a second
+# manual step. NO_AUTO_CONFIGURE opts out for callers that use make_taskdir only
+# to harvest a goal name + time file and then delete the dir (see refactor_split).
+if [ -z "$NO_AUTO_CONFIGURE" ]; then
+	"$HERE"/configure_in_dash "$taskdir" >&2
+fi
+
 echo $taskdir

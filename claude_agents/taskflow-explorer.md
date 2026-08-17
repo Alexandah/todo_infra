@@ -29,6 +29,10 @@ Do:
 Return ONLY a structured digest, `<= 40` lines, no preamble:
 - **RELEVANT FILES / URLS:** path/url — one-line role (only the few that matter)
 - **INFERRED INTENT:** what "done" looks like, in 1–2 sentences
+- **WHAT ALREADY EXISTS:** files/functions/patterns this work should reuse or
+  extend rather than reinvent (or "nothing relevant")
+- **SMALLEST VIABLE CHANGE:** the minimum edit that would satisfy the inferred
+  intent, in 1 sentence
 - **CONSTRAINTS:** hard requirements / boundaries (incl. scoped-autonomy and any
   cross-system areas)
 - **RISKS:** what could go wrong or be misread

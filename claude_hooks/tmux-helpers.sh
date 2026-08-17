@@ -11,6 +11,24 @@ CLAUDE_DASH_WINDOW="dash"
 CLAUDE_DASH_LOCKFILE="/tmp/claude-dash-relayout.lock"
 CLAUDE_DASH_PERMS_STACK="${CLAUDE_DASH_PERMS_STACK:-/tmp/claude-dash-perms.stack}"
 CLAUDE_DASH_DONE_STACK="${CLAUDE_DASH_DONE_STACK:-/tmp/claude-dash-done.stack}"
+CLAUDE_DASH_COLOR_STATE="${CLAUDE_DASH_COLOR_STATE:-/tmp/claude-dash-color.state}"
+CLAUDE_DASH_COLOR_LOCKFILE="${CLAUDE_DASH_COLOR_LOCKFILE:-/tmp/claude-dash-color.lock}"
+_DASH_COLORS=(red blue green yellow purple orange pink cyan)
+
+# --- _dash_next_color ---
+# Round-robin through _DASH_COLORS, persisting the last-used index across
+# invocations in CLAUDE_DASH_COLOR_STATE (lock-guarded for concurrent launches).
+_dash_next_color() {
+    local idx
+    {
+        flock -x 9
+        idx=$(cat "$CLAUDE_DASH_COLOR_STATE" 2>/dev/null)
+        [ -z "$idx" ] && idx=-1
+        idx=$(( (idx + 1) % ${#_DASH_COLORS[@]} ))
+        echo "$idx" > "$CLAUDE_DASH_COLOR_STATE"
+    } 9>"$CLAUDE_DASH_COLOR_LOCKFILE"
+    echo "${_DASH_COLORS[$idx]}"
+}
 
 # --- _dash_stack_push ---
 # Push pane_id onto a stack file (dedupe-then-append so it is the unique top).
@@ -227,8 +245,18 @@ dash_view_apply() {
 
 # --- dash_ensure_session ---
 # Create the claude-dash session with 3 header panes if it doesn't exist.
+# Render each pane's @task_name on its border. Idempotent, and applied on the
+# already-exists path too so a session created before this option existed gets
+# upgraded in place. Header panes print their own inverse-video label, so their
+# border is left blank rather than duplicating it.
+_dash_borders() {
+    local target="$CLAUDE_DASH_SESSION:$CLAUDE_DASH_WINDOW"
+    tmux set-option -w -t "$target" pane-border-status top 2>/dev/null || true
+    tmux set-option -w -t "$target" pane-border-format ' #{?@header,,#{@task_name}} ' 2>/dev/null || true
+}
+
 dash_ensure_session() {
-    tmux has-session -t "$CLAUDE_DASH_SESSION" 2>/dev/null && return 0
+    tmux has-session -t "$CLAUDE_DASH_SESSION" 2>/dev/null && { _dash_borders; return 0; }
 
     # Create session with RUNNING header
     tmux new-session -d -s "$CLAUDE_DASH_SESSION" -n "$CLAUDE_DASH_WINDOW" \
@@ -265,6 +293,8 @@ dash_ensure_session() {
     # Re-equalize on terminal resize too
     tmux set-hook -t "$CLAUDE_DASH_SESSION" client-resized \
         "run-shell 'bash $HOME/.claude/hooks/tmux-relayout.sh'"
+
+    _dash_borders
 }
 
 # --- dash_relayout ---
@@ -370,6 +400,18 @@ dash_add_task() {
     # Set metadata
     tmux set-option -p -t "$new_pane" @column "$column"
     tmux set-option -p -t "$new_pane" @task_name "$task_name"
+
+    # Round-robin session coloring: inject `/color <next>` once the new
+    # pane's Claude instance has booted enough to read its input loop.
+    # Skipped for DASH_NO_COLOR panes: these run a plain TUI (fzf/lf/hmm), not
+    # Claude, so the send-keys would be typed straight into whatever prompt is
+    # on screen -- e.g. into the wizard's first fzf query, then Enter-submitted.
+    if [ -z "${DASH_NO_COLOR:-}" ]; then
+        local color
+        color=$(_dash_next_color)
+        ( sleep 2; tmux send-keys -t "$new_pane" "/color $color" Enter ) &
+        disown 2>/dev/null || true
+    fi
 
     dash_relayout
 

@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-source /home/erandalex/main/todo/.infra/bash_utils
+source ~/main/todo/.infra/bash_utils
 
 MY_NAME=$(basename "$0")
 taskdir=$(cd "$(dirname "$0")" && pwd)

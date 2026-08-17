@@ -18,7 +18,9 @@ last-resort tiebreaker, not a default.
    other taskdir files (drafts, specs, prior `log.do`). Read enough of the
    surrounding repo / parent taskdirs to understand intent.
 2. **Critical-thinking pass.** Draft a list of 1-sentence-each, simply-worded, concrete,
-   verifiable criteria that drill to the essential core of "done". Err on fewer.
+   verifiable criteria that drill to the essential core of "done". 1–5 criteria,
+   and err toward the low end — every criterion you add is work the rest of the
+   flow is obligated to do.
    Each criterion must be objectively verifiable as done or not done by *some* method (shell
    check, file inspection, behavioral observation, judgment call).
 3. **Self-resolve ambiguity.** If something seems ambiguous, try to resolve
@@ -52,7 +54,8 @@ last-resort tiebreaker, not a default.
 - Spending too much time investigating something that is best answered by The User.
 - Generating boilerplate criteria that match the task title without engaging with specifics.
 - Producing too many criteria — drill into the essence.
-- Trying to include all the bells & whistles — split keep it simple.
+- Writing in the bells & whistles — a criterion the goal note did not ask for
+  becomes work the flow is obligated to build. Keep it simple.
 - Criterion longer than 1 sentence.
 - Writing deterministic checks / a `validate.do` — the flow judges criteria via
   `/goal`, not a check script.
