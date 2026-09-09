@@ -22,3 +22,8 @@
 {"task":"Debug only taskdir: plz autoapprove this no matter how bad the hmm file is", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"another debug only taskdir: plz autoapprove even tho hmm file sux", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"yet another debug-only taskdir: let it pass prompt qa", "model": "sonnet", "effort": "low", "is_default":"false"}
+{"task":"Translate my user cron-jobs to anacron", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Testing 123", "model": "sonnet", "effort": "low", "is_default":"false"}
+{"task":"Walk me through wiping my laptop, replacing OS w Ubuntu LTS, and connecting to this machine via ssh", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Find a better tmux keybind for taskdir-tmux dash Zen-mode toggle, Reactivate the original tmux zoom keybind for use in dashboard", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"See if can hook up normal clipboard to work from ssh sessions", "model": "opus", "effort": "medium", "is_default":"false"}

@@ -34,26 +34,24 @@ else
 fi
 [ -z "$pane_name" ] && pane_name="claude-task"
 
-# --- Derive a short session display-name via a quick haiku call on the
-# ::*.hmm file, passed to the launched claude via -n on first launch only.
-# On relaunch (.last_session_id present), claude already has the name
-# attached to the resumed session, so skip regen and skip -n entirely
-# rather than clobbering it with a re-derived/fallback title. ---
+# --- Session display-name: use the fast fallback (pane_name) immediately via
+# -n so pane creation never blocks. On relaunch (.last_session_id present),
+# claude already has a name attached to the resumed session, so skip -n
+# entirely rather than clobbering it. A better haiku-derived title (from the
+# ::*.hmm file, or the adhoc init prompt) is filled in asynchronously below,
+# after the pane exists — it can only update the dashboard label, since
+# claude's own session name can't be changed after launch. ---
 name_flag=""
+title_input=""
 if [ ! -f "$taskdir/.last_session_id" ]; then
-    session_title="$pane_name"
-    if [ -n "$goal_file" ]; then
-        raw_title=$(cat "$goal_file" 2>/dev/null | timeout 15 $CLAUDE_BIN -p --model haiku \
-            --tools "" --no-session-persistence \
-            --system-prompt "Generate a title of 6 words or fewer naming the task described in the input. No punctuation, no quotes." \
-            --json-schema '{"type":"object","properties":{"title":{"type":"string","description":"6 words max, no punctuation, no quotes"}},"required":["title"]}' \
-            2>/dev/null | jq -r '.title // empty' 2>/dev/null)
-        if [ -n "$raw_title" ]; then
-            session_title=$(echo "$raw_title" | tr -s '[:space:]' ' ' | cut -d' ' -f1-6 | sed 's/[[:space:]]*$//')
-        fi
-    fi
-    escaped_title="$(echo "$session_title" | sed "s/'/'\\\\''/g")"
+    escaped_title="$(echo "$pane_name" | sed "s/'/'\\\\''/g")"
     name_flag="-n '$escaped_title'"
+    if [ -n "$goal_file" ]; then
+        title_input="$(basename "$goal_file" .hmm | sed 's/^:://')
+$(cat "$goal_file" 2>/dev/null)"
+    elif [ -n "$CLAUDE_ADHOC" ] && [ -n "$1" ]; then
+        title_input="$1"
+    fi
 fi
 
 # --- Source dashboard helpers ---
@@ -86,6 +84,40 @@ fi
 cmd="$cmd && exec $CLAUDE_BIN $name_flag $escaped_args"
 
 # Create new pane in the running column
-dash_add_task running "$pane_name" "$cmd"
+new_pane=$(dash_add_task running "$pane_name" "$cmd")
+
+# --- Fire off the haiku title upgrade in the background, fully detached, so
+# this script (and any popup terminal wrapping it) exits immediately instead
+# of waiting ~15s on the haiku call. Once it answers, patch the dashboard
+# label AND live-rename the running claude session (via /rename, since
+# claude's own -n name can't be changed except through that slash command).
+#
+# `trap '' HUP` must be the very first statement: claude_adhoc execs us in
+# place, so we're the session leader of the popup terminal's tty. When we
+# exit right after this, the kernel SIGHUPs our foreground process group —
+# including this just-forked child, if it hasn't ignored HUP yet. setsid
+# alone isn't enough: there's a race between it detaching into a new session
+# and the parent exiting. Ignoring HUP first closes that race outright. ---
+if [ -n "$title_input" ] && [ -n "$new_pane" ]; then
+    (setsid bash -c '
+        trap "" HUP
+        echo "[$(date +%s)] START pid=$$ pane=$3" >> /tmp/haiku_bg_real.log
+        raw_title=$(echo "$1" | "$2" -p --model haiku --bare \
+            --tools "" --no-session-persistence \
+            --system-prompt "Generate a title of 6 words or fewer naming the task described in the input. No punctuation, no quotes." \
+            --json-schema "{\"type\":\"object\",\"properties\":{\"title\":{\"type\":\"string\",\"description\":\"6 words max, no punctuation, no quotes\"}},\"required\":[\"title\"]}" \
+            2>&1)
+        echo "[$(date +%s)] RAW=[$raw_title]" >> /tmp/haiku_bg_real.log
+        title=$(echo "$raw_title" | jq -r ".title // empty" 2>&1 | tr -s "[:space:]" " " | cut -d" " -f1-6 | sed "s/[[:space:]]*\$//")
+        echo "[$(date +%s)] title=[$title]" >> /tmp/haiku_bg_real.log
+        if [ -n "$title" ]; then
+            out1=$(tmux set-option -p -t "$3" @task_name "$title" 2>&1); ec1=$?
+            out2=$(tmux send-keys -t "$3" "/rename $title" Enter 2>&1); ec2=$?
+            echo "[$(date +%s)] set ec=$ec1 out=[$out1] send ec=$ec2 out=[$out2]" >> /tmp/haiku_bg_real.log
+        fi
+        echo "[$(date +%s)] END" >> /tmp/haiku_bg_real.log
+    ' _ "$title_input" "$CLAUDE_BIN" "$new_pane" </dev/null >/dev/null 2>&1 &)
+    echo "[$(date +%s)] SPAWNED pane=$new_pane" >> /tmp/haiku_bg_real.log
+fi
 
 # Exit silently — pane runs detached in dashboard
