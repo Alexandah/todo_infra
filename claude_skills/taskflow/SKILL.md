@@ -12,7 +12,7 @@ Codifies how a taskdir goes from start to done. The flow the todo-system CLAUDE.
 | Principle | Rule |
 |---|---|
 | Context minimization | Hold only: goal note, `acceptance_criteria.md`, small phase digests, approved plan. Never pull raw file dumps or edit churn into the conductor — that is what subagents are for. The conductor delegates ALL file reading/exploration to subagents (phase 1 `taskflow-explorer`; additional read-only `taskflow-explorer` dispatches if deeper reads are needed during Plan or Validate). It never bulk-reads source/artifact files or runs exploratory grep/read directly. |
-| One judged done-signal | Done = `/goal` verdict over locked acceptance criteria (LLM judgment on the transcript), corroborated by the fresh-context validator's adversarial per-criterion verdict. No deterministic oracle — deliberately. For engineered work, run real tests/build and **surface their output** so `/goal` can confirm they ran and passed. |
+| One judged done-signal | Done = the fresh-context validator's adversarial per-criterion verdict, plus the conductor's judgment reading that verdict against the locked acceptance criteria. No deterministic oracle — deliberately. For engineered work, run real tests/build and **surface their output** so the validator and conductor can judge whether they ran and passed. |
 | Human owns direction | Conductor proposes; user disposes at each GATE. Gates are STOP points — do not proceed past one without the user. |
 | Terse phase announce | Emit ONE terse line announcing each phase transition (e.g. `[Phase 2 — Define Criteria]`). No fanfare. |
 | Smallest thing that works | **LESS CODE IS BETTER CODE** — literally fewer lines and characters, with deletions better still. Two axes, both enforced: (1) *scope* — the deliverable is the minimum satisfying the locked criteria, nothing more; added surface area (new files, config knobs, abstraction layers, helpers, unrequested error paths) is a cost the user pays forever. (2) *density* — of the code that must exist, write the logically minimal amount. A 40-line solution to a 10-line problem is a defect even if every line is in scope. Prefer editing an existing thing over creating a new one; if a new file is created, the plan must say why an edit could not do it. **Bloat is a defect, ranked with correctness bugs — not a style nit.** |
@@ -32,14 +32,7 @@ Dispatch `taskflow-explorer` (Task tool, `subagent_type: taskflow-explorer`). It
 The most important gate: define what "done" means **before planning**. Everything downstream is built on this north star.
 
 - **REQUIRED:** Use `define-acceptance-and-validation-criteria`. It derives 1–5 verifiable acceptance criteria and persists them to `acceptance_criteria.md`.
-- Quality bar — criteria + restated goal must clear `prompt_qa_policy.md` (Context, Action, Result all present; a competent agent could execute first-try without guessing). Drive it with:
-  ```
-  /goal "acceptance_criteria.md holds 1–5 acceptance criteria, each a
-  verifiable property, that together satisfy prompt_qa_policy.md; surface any gap as guidance for the next turn.
-  prompt_qa_policy.md:
-  $(cat ~/main/todo/.infra/prompt_qa_policy.md)"
-  ```
-  Let the session self-iterate to the bar, then the goal clears.
+- Quality bar — criteria + restated goal must clear `prompt_qa_policy.md` (Context, Action, Result all present; a competent agent could execute first-try without guessing). The conductor reads `~/main/todo/.infra/prompt_qa_policy.md` and iterates the criteria in-session until they clear that bar.
 - **GATE C (LOAD-BEARING):** `AskUserQuestion` — present the criteria, ask "Approve these acceptance criteria?" Options: Approve / Simplify — cut to essentials / Make stricter / Add or remove criterion. Do not plan until the north star is locked.
 
 ### 3. Plan — conductor [in-session]
@@ -65,11 +58,7 @@ For **each distinct feature** from the plan:
 Rules:
 - The conductor **never edits task artifacts directly** — every implementation edit goes through a `taskflow-implementer` subagent.
 - Collect changelists; do NOT pull full diffs into your context.
-- `/goal` (per increment, after plan approval):
-  ```
-  /goal "every approved feature is implemented and meets its acceptance
-  criteria as locked in acceptance_criteria.md"
-  ```
+- The per-feature spec-compliance review in step 2 above is this phase's check — it confirms the increment against the locked criteria before moving on.
 
 ### 5. Validate — subagent: `taskflow-validator` [sonnet, FRESH context]
 
@@ -82,14 +71,7 @@ Dispatch `taskflow-validator` in a **fresh context** — it has not seen the imp
 - **for interactive / runtime systems, EXERCISES the integrated system live as the user would** — actually run it (start the process, fire the keybind/command, drive the real state) and echo what happened. Static checks (`bash -n`, logic sims, code-traces) prove syntax and isolated logic, NOT integration. They do NOT substitute for running the thing. Explicitly hunt the states a fresh artifact won't have exercised: cold-start / empty state, pre-existing state from before the change was installed, missed/late events, deployment gaps (symlink not installed, config not reloaded, CRLF). If a criterion can only be confirmed by a human driving the live UI, say so and route it to GATE D as an explicit user acceptance test rather than claiming PASS on static evidence. For UX-facing / directly-human-operated changes (keybinds, UI, anything a human, not a script, operates), an isolated test-harness PASS is necessary but not sufficient: before presenting GATE D, the conductor must additionally deploy the change to the real live instance (when one exists) and explicitly ask the user to try it themselves and confirm it works — do not present GATE D's "Accept validation results?" on harness evidence alone for this class of change;
 - returns a **per-criterion verdict** (PASS/FAIL + why) + adversarial findings.
 
-`/goal`:
-```
-/goal "every criterion in acceptance_criteria.md is met — per the validator's
-per-criterion verdict and the transcript — including that any engineered
-checks (tests/lint/build) were run and observed to pass"
-```
-
-Cap the autonomous fix→revalidate loop at ~3 cycles (matches the constitution's autonomous-resolution rule). Done-signal = this `/goal` verdict plus the validator's judgment.
+Cap the autonomous fix→revalidate loop at ~3 cycles (matches the constitution's autonomous-resolution rule). Done-signal = the validator's per-criterion verdict plus the conductor's judgment reading it against `acceptance_criteria.md`.
 
 - **GATE D:** `AskUserQuestion` — show per-criterion verdict + over-build findings + adversarial findings, ask "Accept validation results?" Options: Accept / Trim over-build / Be stricter / Reject.
 
@@ -114,14 +96,20 @@ Explicit checklist:
 
 If the user asks for more after Validate / Finalize, re-enter at **Criteria** for the new increment: Criteria → Plan → Implement → Validate. Each increment re-locks its own north star.
 
-## /goal — where and why (exactly three phases)
+## What checks each phase
 
-Criteria / Implement / Validate each get a `/goal` condition so the session self-iterates to that phase's quality bar. At Validate it **is** the done-signal — its verdict over the locked criteria plus the adversarial validator is what "done" means. The human GATES still gate: a `/goal` turn that needs sign-off asks the user and only clears once the bar — and any required approval — holds.
+- **Criteria:** the conductor self-checks the criteria against `prompt_qa_policy.md` in-session.
+- **Plan:** `ExitPlanMode`'s native gate (GATE B) before the plan reaches the user.
+- **Implement:** the per-feature spec-compliance review (phase 4, step 2).
+- **Validate:** the fresh-context validator's per-criterion verdict, read by the conductor.
+- **Finalize:** the conductor's own judgment, plus GATE E/F sign-off.
+
+The human GATES still gate: each needs explicit sign-off.
 
 ## Enforcement — stated honestly
 
-- **CODE-ENFORCED (hard):** ExitPlanMode (native blocking gate) — the ONLY hard gate. It cannot be skipped.
-- **MODEL-FOLLOWED (soft):** everything else — the done-signal, phase order, intermediate gates — are directives this conductor follows. This is strictly more codified than prose but is not a hard interpreter. Do NOT add a `Stop` hook to force gates — the only `Stop` slot is taken by `tmux-move-done.sh`; a competing blocking `Stop` hook would create incoherent dashboard state.
+- **CODE-ENFORCED (hard):** ExitPlanMode (native blocking gate) — the ONLY hard gate.
+- **MODEL-FOLLOWED (soft):** everything else — the done-signal, phase order, intermediate gates — are directives this conductor follows. A prior experiment tried enforcing gates with a generic model-judged `Stop` hook (and later per-phase judge hooks wired at `ExitPlanMode`/`SubagentStop`/`Stop`); measured performance was no better than relying on the conductor's own judgment, so neither is used — do not re-add a blocking `Stop` hook here.
 
 ## Stage Dialog Logging
 
@@ -151,15 +139,16 @@ Rules:
 - The conductor reading source files or running grep/read to explore directly — **delegate ALL reading to a `taskflow-explorer` subagent**; the conductor's context holds only digests, criteria, and the goal note.
 - Validating in the conductor's own context — use the fresh-context subagent.
 - Passing Validate on static checks alone (`bash -n` / sims / code-trace) for an interactive or runtime system without ever running it live — this is exactly how a real integration bug (cold-start, pre-existing state, deploy gap) slips a green Validate. Exercise it live, or route the live check to GATE D as a user acceptance test.
+- Treating a negative search result as evidence of absence without validating the search method first — grepping a binary/compressed format as text, matching a literal against a value that's computed/parametric in the source, or sweeping a scope that excludes where the thing lives. State the sweep's scope alongside any "not found" claim.
 - Asking the user a gate question whose answer is an empirical fact — determine the fact first, then ask only what is genuinely a preference.
 - Pulling raw file dumps / full diffs into the conductor (defeats the purpose).
-- Scaffolding deterministic checks for ad-hoc criteria that pass trivially — let `/goal` judge the transcript instead.
+- Scaffolding deterministic checks for ad-hoc criteria that pass trivially — let the validator and conductor judge the transcript instead.
 - Creating a new file where an edit to an existing one would do — check the digest's WHAT ALREADY EXISTS first.
 - Implementing past the locked criteria because it "might be wanted later" — that is a defect, not foresight.
 - Writing 40 lines where 10 would do, then calling it done because all 40 are in scope — density is judged separately from scope.
 - Leaving code the change made dead, or passing up a deletion the change enabled.
 - A validator finding that demands machinery no criterion requires — hostile means demanding evidence, not demanding more code.
-- Running tests/build without surfacing their output — `/goal` can only judge what the transcript shows.
+- Running tests/build without surfacing their output — the validator and conductor can only judge what the transcript shows.
 - Committing / pushing or marking the task done without the user.
 - Skipping the post-implementer spec-compliance review before moving to the next feature.
 - Turning the after-action report into a nitpick list or a speculative systematizing exercise.

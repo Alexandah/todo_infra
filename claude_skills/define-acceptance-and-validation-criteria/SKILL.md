@@ -6,8 +6,7 @@ tools: Read, Write, Edit, AskUserQuestion, Grep, Glob
 
 # define-acceptance-and-validation-criteria
 
-> "Validation criteria" here = criteria that `/goal` validates the work against,
-> NOT a validation script. This skill writes English criteria only.
+> "Validation criteria" here = criteria the taskflow Validate phase's validator/conductor judge the work against, NOT a validation script. This skill writes English criteria only.
 
 You own the criteria. Derive them yourself first; treat the user as a
 last-resort tiebreaker, not a default.
@@ -33,10 +32,10 @@ last-resort tiebreaker, not a default.
 5. **Persist criteria.** Write the criteria to `acceptance_criteria.md` in
    the taskdir — plain markdown, one criterion per item, each a verifiable
    property. No executable scaffold, no checks, no `chmod`. This file is the
-   north-star record the rest of the flow reads and passes to `/goal`.
+   north-star record the rest of the flow reads.
 6. **Hand off.** Report a one-line summary of the criteria and proceed to
-   implementation. From here the criteria are the input to `/goal` throughout
-   the flow; the taskflow Validate phase judges the work against them.
+   implementation. The taskflow Validate phase's fresh-context validator, and
+   the conductor's judgment, check the work against these criteria.
 
 ## Criteria quality bar
 
@@ -44,7 +43,7 @@ last-resort tiebreaker, not a default.
   its frontmatter `name:` field is `X`." → verifiable.
 - **Good**: "User-facing wording in the new dialog matches their stated tone
   (terse, no pleasantries)." → verifiable by reading the output (a judgment
-  call `/goal` can make).
+  call the validator/conductor can make).
 - **Bad**: "Code is clean." → not verifiable.
 - **Bad**: "Implementation works." → not verifiable; says nothing.
 
@@ -58,4 +57,4 @@ last-resort tiebreaker, not a default.
   becomes work the flow is obligated to build. Keep it simple.
 - Criterion longer than 1 sentence.
 - Writing deterministic checks / a `validate.do` — the flow judges criteria via
-  `/goal`, not a check script.
+  the validator/conductor, not a check script.

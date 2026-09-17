@@ -27,3 +27,7 @@
 {"task":"Walk me through wiping my laptop, replacing OS w Ubuntu LTS, and connecting to this machine via ssh", "model": "opus", "effort": "medium", "is_default":"false"}
 {"task":"Find a better tmux keybind for taskdir-tmux dash Zen-mode toggle, Reactivate the original tmux zoom keybind for use in dashboard", "model": "sonnet", "effort": "high", "is_default":"true"}
 {"task":"See if can hook up normal clipboard to work from ssh sessions", "model": "opus", "effort": "medium", "is_default":"false"}
+{"task":"Fix todo-infra Claude skills + agents to not use slash-goal to force validation, since it is UI-only", "model": "sonnet", "effort": "high", "is_default":"true"}
+{"task":"Fix todo-infra Claude skills + agents to not use slash-goal to force validation, since it is UI-only", "model": "opus", "effort": "xhigh", "is_default":"false"}
+{"task":"DESPCSOC-19876 add missing odt2rdl registers", "model": "opus", "effort": "xhigh", "is_default":"false"}
+{"task":"CAN jira firefighting Sept 2026 Week 2", "model": "opus", "effort": "xhigh", "is_default":"false"}
