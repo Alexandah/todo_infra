@@ -105,9 +105,18 @@ if [ "$category_to_set_non_interactively" = "NULL" ] ; then #INTERACTIVE MODE
 			fi
 			echo "$category		$percent_done		$hours_done"
 		done |
-			fzf --prompt="CATEGORIZE -- $taskdir_name (${taskdir_time}h) >" --header 'CATEGORY	%_DONE		HOURS' $FZF_GAP_ARG |
-		awk '{print $1}'
+			fzf --prompt="CATEGORIZE -- $taskdir_name (${taskdir_time}h) >" --header 'CATEGORY	%_DONE		HOURS	|	or write next action' --print-query $FZF_GAP_ARG
 	)
+	exit_code=$?
+	num_fzf_response_lines=$(echo "mark_as" | wc -l)
+	if [ $exit_code -ne 0 -a $num_fzf_response_lines -eq 1 ]; then #skip the move-category logic, just change name within same dir
+		user_query=$(echo "$mark_as" | head -n1)
+		new_name=$(echo "$user_query" | sed 's/\s\+/_/g')
+		mv --no-clobber "$taskdir" "$(dirname "$taskdir")/$new_name"
+		exit
+	else
+		mark_as=$(echo "$mark_as" | tail -n1 | awk '{print $1}')
+	fi
 else
 	mark_as=$category_to_set_non_interactively
 fi
@@ -157,42 +166,6 @@ if [ "$mark_as" = "done" ] ; then
         #01-23-26   within 2 weeks of writing the above, it turns out I am empirically capable of this level of underestimation
 		echo "8          8h"
 		echo "9          9h"
-        #but for the love of god, surely please do not exceed this
-		#echo "10         10h"
-		#echo "11         11h"
-		#echo "12         12h"
-		#echo "13         13h"
-		#echo "14         14h"
-		#echo "15         15h"
-		#echo "16         16h"
-		#echo "17         17h"
-		#echo "18         18h"
-		#echo "19         19h"
-		#echo "20         20h"
-		#echo "24         1d"
-		#echo "36         1d 12h"
-		#echo "48         2d"
-		#echo "72         3d"
-		#echo "96         4d"
-		#echo "120        5d"
-		#echo "144        6d"
-		#echo "168        1w"
-		#echo "264        1w 4d"
-		#echo "336        2w"
-		#echo "504        3w"
-		#echo "672        1mo"
-		#echo "1008       1mo 2w"
-		#echo "1344       2mo"
-		#echo "2016       3mo"
-		#echo "2688       4mo"
-		#echo "3360       5mo"
-		#echo "4032       6mo"
-		#echo "4704       7mo"
-		#echo "5376       8mo"
-		#echo "6048       9mo"
-		#echo "6720       10mo"
-		#echo "7392       11mo"
-		#echo "8064       1y"
 	)
 	# BEGIN_AUTO_COMPUTE
 	_time_orig_file="$taskdir/.time_orig"

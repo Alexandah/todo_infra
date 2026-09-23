@@ -5,6 +5,16 @@ TODO_ROOT=$(dirname "$HERE")
 taskdir_template="$1"
 
 template_name=$(basename "$taskdir_template")
+template_hmm=("$taskdir_template"/::*.hmm)
+
+if [ -e "${template_hmm[0]}" ]; then
+	hmm_pattern=$(basename "${template_hmm[0]}" | sed 's/DATE/*/g')
+	if compgen -G "$TODO_ROOT/new/*/$hmm_pattern" > /dev/null; then
+		echo "$(date -Iseconds) skip: $hmm_pattern already in inbox" >> "$HERE/cron.log"
+		exit 0
+	fi
+fi
+
 instantiated_template="$TODO_ROOT/new/$template_name"
 
 cp -r "$taskdir_template" "$instantiated_template"
