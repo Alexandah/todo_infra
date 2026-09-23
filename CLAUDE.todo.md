@@ -51,20 +51,20 @@ The global CLAUDE.md "Validation & Debug Ownership" mandates a two-prong duty
 overrides the deterministic-verifier prong** — taskdirs are general-purpose, not
 the sterile, contract-bound environments where mechanical check suites earn
 their keep, so auto-generated checks there almost always pass on the first try
-and only burn tokens. Validation here is **acceptance criteria judged by
-`/goal`**, not a `validate.do`:
+and only burn tokens. Validation here is **acceptance criteria judged by the
+fresh-context validator subagent and your own judgment**, not a `validate.do`:
 
 - Define 1–5 English acceptance criteria (the
   `define-acceptance-and-validation-criteria` skill persists them to
   `acceptance_criteria.md`).
-- Drive the work to meet them, then pass them to `/goal` — it judges from the
-  transcript whether each is met, looping until satisfied. For engineered tasks
-  (tests, lint, build), RUN them and surface their output so `/goal` can confirm
-  they ran and passed.
+- Drive the work to meet them, then dispatch the fresh-context validator
+  subagent to render a per-criterion verdict. For engineered tasks
+  (tests, lint, build), RUN them and surface their output so the verdict can
+  confirm they ran and passed.
 - Your own judgment remains the second prong: read the diff, confirm intent
-  fidelity. On `/goal` satisfied AND your judgment passing, indicate the task is
-  complete; otherwise the autonomous-resolution loop (~3 cycles) applies before
-  surfacing.
+  fidelity. On the validator's verdict AND your judgment passing, indicate
+  the task is complete; otherwise the autonomous-resolution loop (~3 cycles)
+  applies before surfacing.
 
 ## Cross-System Areas
 

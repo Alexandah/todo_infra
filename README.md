@@ -35,8 +35,9 @@ launches Claude Code agents into a live tmux dashboard, one pane per task.
 - `CLAUDE.todo.md` — shared todo-system instructions; symlinked to
   `~/main/todo/CLAUDE.md` (auto-loaded by Claude's dir-hierarchy walk)
 - `claude_skills/` — project skills (`taskflow`,
-  `define-acceptance-and-validation-criteria`); validation is `/goal` over
-  acceptance criteria, not a deterministic script. Symlinked to
+  `define-acceptance-and-validation-criteria`); validation is acceptance
+  criteria judged by the fresh-context validator subagent and the conductor's
+  own judgment, not a deterministic script. Symlinked to
   `~/main/todo/.claude/skills`
 
 ## Recurring (ana)cron jobs
